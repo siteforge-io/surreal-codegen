@@ -1,0 +1,13 @@
+[package]
+name = "type_generator"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+surrealdb = "1.4.2"
+anyhow = "1.0.83"
+serde_json = "1.0.117"
+
+# add pretty assertions but only for tests
+[dev-dependencies]
+pretty_assertions_sorted = "1.2.3"
