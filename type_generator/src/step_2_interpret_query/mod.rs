@@ -4,6 +4,7 @@ mod return_types;
 mod select_statement;
 mod utils;
 
+use create_statement::get_create_statement_return_type;
 use delete_statement::get_delete_statement_return_type;
 use surrealdb::sql::{Query, Statement, Subquery};
 
@@ -33,7 +34,8 @@ fn get_statement_return_type(
     match stmt {
         Statement::Select(select) => get_select_statement_return_type(select, schema, variables),
         Statement::Delete(delete) => get_delete_statement_return_type(delete, schema, variables),
-        _ => Err(anyhow::anyhow!("Unsupported statement type: {:?}", stmt)),
+        Statement::Create(create) => get_create_statement_return_type(create, schema, variables),
+        _ => Err(anyhow::anyhow!("Unsupported statement type: `{}`", stmt)),
     }
 }
 
@@ -45,6 +47,7 @@ fn get_subquery_return_type(
     match subquery {
         Subquery::Select(select) => get_select_statement_return_type(select, schema, variables),
         Subquery::Delete(delete) => get_delete_statement_return_type(delete, schema, variables),
-        _ => Err(anyhow::anyhow!("Unsupported subquery type: {:?}", subquery)),
+        Subquery::Create(create) => get_create_statement_return_type(create, schema, variables),
+        _ => Err(anyhow::anyhow!("Unsupported subquery type: `{}`", subquery)),
     }
 }

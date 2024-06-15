@@ -256,7 +256,11 @@ DEFINE FIELD name ON user TYPE string;
         CodegenInformation {
             parameters: HashMap::new(),
             return_types: vec![QueryReturnType::Object(
-                [("name".into(), QueryReturnType::String.into()),].into()
+                [
+                    ("name".into(), QueryReturnType::String.into()),
+                    ("id".into(), QueryReturnType::Record(vec!["user".into()]))
+                ]
+                .into()
             ),]
         }
     );
@@ -420,4 +424,3 @@ DEFINE FIELD tags ON post TYPE array<string>;
 
     Ok(())
 }
-

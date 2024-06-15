@@ -21,10 +21,10 @@ DEFINE FIELD name ON user TYPE string;
             return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
                 [(
                     "before".into(),
-                    QueryReturnType::Object(HashMap::from([(
-                        "name".into(),
-                        QueryReturnType::String
-                    )]))
+                    QueryReturnType::Object(HashMap::from([
+                        ("id".into(), QueryReturnType::Record(vec!["user".into()])),
+                        ("name".into(), QueryReturnType::String)
+                    ]))
                 )]
                 .into()
             )))]

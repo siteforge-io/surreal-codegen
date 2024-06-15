@@ -77,6 +77,12 @@ pub fn get_tables(query: &Query) -> Result<CodegenTables, anyhow::Error> {
     for table_definition in table_definitions {
         let mut fields = HashMap::new();
 
+        // insert the implicit id field
+        fields.insert(
+            "id".into(),
+            QueryReturnType::Record(vec![table_definition.name.clone().into()]),
+        );
+
         for field_definition in &field_definitions {
             if field_definition.what == table_definition.name {
                 let return_type = match &field_definition.kind {
@@ -139,6 +145,7 @@ DEFINE FIELD bar.* ON user TYPE string;
         let expected_table = CodegenTable {
             name: "user".into(),
             fields: [
+                ("id".into(), QueryReturnType::Record(vec!["user".into()])),
                 ("name".into(), QueryReturnType::String),
                 ("age".into(), QueryReturnType::Int),
                 ("bool".into(), QueryReturnType::Bool),

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use surrealdb::sql::{Field, Fields, Ident, Idiom, Param, Part, Value};
 
@@ -7,7 +7,52 @@ use crate::{
     QueryReturnType,
 };
 
-use super::{get_subquery_return_type, utils::merge_into_map_recursively};
+use super::{
+    get_subquery_return_type,
+    utils::{get_what_table, merge_into_map_recursively},
+};
+
+pub fn get_statement_fields<F>(
+    what: &[Value],
+    schema: &CodegenTables,
+    variables: &CodegenParameters,
+    fields: Option<&Fields>,
+    get_field_and_variables: F,
+) -> Result<QueryReturnType, anyhow::Error>
+where
+    F: Fn(&mut HashMap<String, QueryReturnType>, &mut CodegenParameters) -> (),
+{
+    let mut return_types = Vec::new();
+    let mut used_tables = HashSet::new();
+
+    for value in what.iter() {
+        let table = get_what_table(value, variables, schema)?;
+
+        if used_tables.contains(&table.name) {
+            continue;
+        }
+        used_tables.insert(table.name.clone());
+
+        let return_type = if let Some(fields) = fields {
+            let mut variables = variables.clone();
+            let mut table_fields = table.fields.clone();
+
+            get_field_and_variables(&mut table_fields, &mut variables);
+
+            get_fields_return_values(fields, &table_fields, schema, &variables)?
+        } else {
+            QueryReturnType::Object(table.fields.clone())
+        };
+
+        return_types.push(return_type);
+    }
+
+    if return_types.len() == 1 {
+        Ok(return_types.pop().unwrap())
+    } else {
+        Ok(QueryReturnType::Either(return_types))
+    }
+}
 
 pub fn get_fields_return_values(
     fields: &Fields,
