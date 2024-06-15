@@ -43,7 +43,7 @@ pub fn merge_into_map_recursively(
     match &parts[0] {
         Part::Field(field_name) => {
             if parts.len() == 1 {
-                map.insert(field_name.to_string(), return_type);
+                map.insert(field_name.0.clone(), return_type);
             } else {
                 // check if the return type is a double optional, because something like xyz.abc returns option<option<string>> if xyz and abc are both optional
                 if is_double_optional(&return_type) {

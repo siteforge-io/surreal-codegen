@@ -1,3 +1,4 @@
+mod create_statement;
 mod delete_statement;
 mod return_types;
 mod select_statement;
@@ -43,6 +44,7 @@ fn get_subquery_return_type(
 ) -> Result<QueryReturnType, anyhow::Error> {
     match subquery {
         Subquery::Select(select) => get_select_statement_return_type(select, schema, variables),
+        Subquery::Delete(delete) => get_delete_statement_return_type(delete, schema, variables),
         _ => Err(anyhow::anyhow!("Unsupported subquery type: {:?}", subquery)),
     }
 }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use surrealdb::sql::{Field, Fields, Ident, Idiom, Part, Value};
+use surrealdb::sql::{Field, Fields, Ident, Idiom, Param, Part, Value};
 
 use crate::{
     step_1_parse_sql::{CodegenParameters, CodegenTables},
@@ -78,9 +78,20 @@ pub fn get_expression_return_type(
     variables: &CodegenParameters,
 ) -> Result<QueryReturnType, anyhow::Error> {
     match expr {
-        Value::Idiom(idiom) => get_field_from_paths(&idiom.0, &field_types, schema),
+        Value::Idiom(idiom) => get_field_from_paths(&idiom.0, &field_types, schema, variables),
         Value::Subquery(subquery) => get_subquery_return_type(subquery, schema, variables),
+        Value::Param(param) => get_parameter_return_type(param, variables),
         _ => Err(anyhow::anyhow!("Unsupported expression: {}", expr)),
+    }
+}
+
+fn get_parameter_return_type(
+    param: &Param,
+    variables: &CodegenParameters,
+) -> Result<QueryReturnType, anyhow::Error> {
+    match variables.get(&param.0 .0) {
+        Some(return_type) => Ok(return_type.clone()),
+        None => Err(anyhow::anyhow!("Unknown parameter: {}", param)),
     }
 }
 
@@ -88,12 +99,23 @@ pub fn get_field_from_paths(
     parts: &[Part],
     field_types: &HashMap<String, QueryReturnType>,
     schema: &CodegenTables,
+    variables: &CodegenParameters,
 ) -> Result<QueryReturnType, anyhow::Error> {
     match parts.first() {
         Some(Part::Field(field_name)) => match field_types.get(field_name.as_str()) {
-            Some(return_type) => match_return_type(return_type, &parts, field_types, schema),
+            Some(return_type) => {
+                match_return_type(return_type, &parts, field_types, schema, variables)
+            }
             None => Err(anyhow::anyhow!("Field not found: {}", field_name)),
         },
+        Some(Part::Start(Value::Param(Param(Ident(param_name))))) => {
+            match variables.get(param_name) {
+                Some(return_type) => {
+                    match_return_type(return_type, &parts, field_types, schema, variables)
+                }
+                None => Err(anyhow::anyhow!("Unknown parameter: {}", param_name)),
+            }
+        }
         Some(_) => Err(anyhow::anyhow!("Unsupported path: {:?}", parts)),
         // We're returning an actual object
         None => Ok(QueryReturnType::Object(field_types.clone())),
@@ -105,12 +127,13 @@ pub fn match_return_type(
     parts: &[Part],
     field_types: &HashMap<String, QueryReturnType>,
     schema: &CodegenTables,
+    variables: &CodegenParameters,
 ) -> Result<QueryReturnType, anyhow::Error> {
     let has_next_part = parts.len() > 1;
 
     match return_type {
         QueryReturnType::Object(nested_fields) => {
-            get_field_from_paths(&parts[1..], nested_fields, schema)
+            get_field_from_paths(&parts[1..], nested_fields, schema, variables)
         }
         QueryReturnType::String => Ok(QueryReturnType::String),
         QueryReturnType::Int => Ok(QueryReturnType::Int),
@@ -124,9 +147,12 @@ pub fn match_return_type(
                 let mut return_types = Vec::new();
                 for table in tables.iter() {
                     let return_type = match schema.get(table.as_str()) {
-                        Some(new_schema) => {
-                            get_field_from_paths(&parts[1..], &new_schema.fields, schema)?
-                        }
+                        Some(new_schema) => get_field_from_paths(
+                            &parts[1..],
+                            &new_schema.fields,
+                            schema,
+                            variables,
+                        )?,
                         None => return Err(anyhow::anyhow!("Unknown table: {}", table)),
                     };
                     return_types.push(return_type);
@@ -141,10 +167,10 @@ pub fn match_return_type(
             }
         }
         QueryReturnType::Option(return_type) => Ok(QueryReturnType::Option(Box::new(
-            match_return_type(return_type, &parts, field_types, schema)?,
+            match_return_type(return_type, &parts, field_types, schema, variables)?,
         ))),
         QueryReturnType::Array(return_type) => Ok(QueryReturnType::Array(Box::new(
-            match_return_type(return_type, &parts, field_types, schema)?,
+            match_return_type(return_type, &parts, field_types, schema, variables)?,
         ))),
         QueryReturnType::Null => Ok(QueryReturnType::Null),
         _ => Err(anyhow::anyhow!(
