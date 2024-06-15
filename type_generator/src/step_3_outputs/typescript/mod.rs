@@ -1,8 +1,10 @@
-use crate::step_2_interpret_query::QueryReturnType;
+use crate::QueryReturnType;
 
-
-
-pub fn generate_typescript(file_name: &str, query: &str, schema: &str) -> Result<String, anyhow::Error> {
+pub fn generate_typescript(
+    file_name: &str,
+    query: &str,
+    schema: &str,
+) -> Result<String, anyhow::Error> {
     let (query, castings) = crate::step_1_parse_sql::parse_query(query)?;
     let schema_query = crate::step_1_parse_sql::parse_sql(schema)?;
     let tables = crate::step_1_parse_sql::get_tables(&schema_query)?;
@@ -12,8 +14,14 @@ pub fn generate_typescript(file_name: &str, query: &str, schema: &str) -> Result
 
     let mut output = String::new();
     let query_string = serde_json::to_string(&query.to_string())?;
-    output.push_str(&format!("export const {}Query = {}\n", camel_case_file_name, query_string));
-    output.push_str(&format!("export type {}QueryResult = [", camel_case_file_name));
+    output.push_str(&format!(
+        "export const {}Query = {}\n",
+        camel_case_file_name, query_string
+    ));
+    output.push_str(&format!(
+        "export type {}QueryResult = [",
+        camel_case_file_name
+    ));
 
     for return_type in return_types {
         output.push_str(&generate_type_definition(return_type)?);
@@ -27,6 +35,11 @@ pub fn generate_typescript(file_name: &str, query: &str, schema: &str) -> Result
 
 fn generate_type_definition(return_type: QueryReturnType) -> Result<String, anyhow::Error> {
     match return_type {
+        QueryReturnType::Any => Ok("any".to_string()),
+        QueryReturnType::Number => Ok("number".to_string()),
+        QueryReturnType::Never => Ok("never".to_string()),
+        QueryReturnType::Null => Ok("null".to_string()),
+        QueryReturnType::Unknown => Ok("unknown".to_string()),
         QueryReturnType::String => Ok("string".to_string()),
         QueryReturnType::Int => Ok("number".to_string()),
         QueryReturnType::Float => Ok("number".to_string()),
@@ -43,7 +56,7 @@ fn generate_type_definition(return_type: QueryReturnType) -> Result<String, anyh
             map.sort_by_key(|x| x.0.to_string());
 
             for (key, value) in map {
-                output.push_str(&format!("{}:{},", key, generate_type_definition(*value)?));
+                output.push_str(&format!("{}:{},", key, generate_type_definition(value)?));
             }
 
             output.push_str("}");
@@ -64,16 +77,21 @@ fn generate_type_definition(return_type: QueryReturnType) -> Result<String, anyh
 
             output.push_str(")");
             Ok(output)
-        },
+        }
         QueryReturnType::Record(_) => unimplemented!(),
-        QueryReturnType::Option(_) => unimplemented!(),
+        QueryReturnType::Option(optional_value) => {
+            let string = generate_type_definition(*optional_value)?;
+            Ok(format!("{}|null", string))
+        }
     }
 }
 
 fn filename_to_camel_case(filename: &str) -> Result<String, anyhow::Error> {
     let parts: Vec<&str> = filename.split('.').collect();
     if parts.len() != 2 {
-        return Err(anyhow::anyhow!("Filename must be of the form `name.extension`"));
+        return Err(anyhow::anyhow!(
+            "Filename must be of the form `name.extension`"
+        ));
     }
 
     let name_part = parts[0];

@@ -2,11 +2,11 @@ pub mod typescript;
 
 pub use typescript::generate_typescript;
 
-use crate::{step_1_parse_sql::ParameterTypes, step_2_interpret_query::QueryReturnType};
+use crate::{step_1_parse_sql::CodegenParameters, QueryReturnType};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct CodegenInformation {
-    pub parameters: ParameterTypes,
+    pub parameters: CodegenParameters,
     pub return_types: Vec<QueryReturnType>,
 }
 
