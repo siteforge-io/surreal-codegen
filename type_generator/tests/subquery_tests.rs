@@ -8,7 +8,8 @@ fn query_with_subquery() -> anyhow::Result<()> {
 SELECT
     name,
     (SELECT name FROM user) AS subquery,
-    (DELETE user)
+    (DELETE user),
+    (UPDATE user SET name = "John" RETURN NONE)
 FROM ONLY user;
 "#;
     let schema_str = r#"
@@ -33,6 +34,10 @@ DEFINE FIELD name ON user TYPE string;
                     ),
                     (
                         "(DELETE user)".into(),
+                        QueryReturnType::Array(Box::new(QueryReturnType::Never.into()))
+                    ),
+                    (
+                        "(UPDATE user SET name = \'John\' RETURN NONE)".into(),
                         QueryReturnType::Array(Box::new(QueryReturnType::Never.into()))
                     ),
                 ]

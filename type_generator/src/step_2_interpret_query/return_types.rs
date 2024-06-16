@@ -124,13 +124,30 @@ pub fn get_expression_return_type(
 ) -> Result<QueryReturnType, anyhow::Error> {
     match expr {
         Value::Idiom(idiom) => get_field_from_paths(&idiom.0, &field_types, schema, variables),
-        Value::Subquery(subquery) => get_subquery_return_type(subquery, schema, variables),
+        Value::Subquery(subquery) => {
+            let mut variables = variables.clone();
+            variables.insert(
+                "parent".into(),
+                QueryReturnType::Object(field_types.clone()),
+            );
+            get_subquery_return_type(subquery, schema, &variables)
+        }
         Value::Param(param) => get_parameter_return_type(param, variables),
+        // These constants could potentially be represented as actual constants in the return types
+        Value::Strand(_) => Ok(QueryReturnType::String),
+        Value::Number(_) => Ok(QueryReturnType::Number),
+        Value::Bool(_) => Ok(QueryReturnType::Bool),
+        Value::Null => Ok(QueryReturnType::Null),
+        Value::Datetime(_) => Ok(QueryReturnType::Datetime),
+        Value::Duration(_) => Ok(QueryReturnType::Duration),
+        Value::None => Ok(QueryReturnType::Null),
+        Value::Array(_) => anyhow::bail!("Arrays are not yet supported"),
+        Value::Object(_) => anyhow::bail!("Objects are not yet supported"),
         _ => Err(anyhow::anyhow!("Unsupported expression: {}", expr)),
     }
 }
 
-fn get_parameter_return_type(
+pub fn get_parameter_return_type(
     param: &Param,
     variables: &CodegenParameters,
 ) -> Result<QueryReturnType, anyhow::Error> {
@@ -161,7 +178,7 @@ pub fn get_field_from_paths(
                 None => Err(anyhow::anyhow!("Unknown parameter: {}", param_name)),
             }
         }
-        Some(_) => Err(anyhow::anyhow!("Unsupported path: {:?}", parts)),
+        Some(_) => Err(anyhow::anyhow!("Unsupported path: {:#?}", parts)),
         // We're returning an actual object
         None => Ok(QueryReturnType::Object(field_types.clone())),
     }
@@ -218,6 +235,7 @@ pub fn match_return_type(
             match_return_type(return_type, &parts, field_types, schema, variables)?,
         ))),
         QueryReturnType::Null => Ok(QueryReturnType::Null),
+        QueryReturnType::Uuid => Ok(QueryReturnType::Uuid),
         _ => Err(anyhow::anyhow!(
             "Unsupported return type: {:?}",
             return_type

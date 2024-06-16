@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use surrealdb::sql::{Param, Part, Value};
+use surrealdb::sql::{Param, Part, Thing, Value};
 
 use crate::{
     step_1_parse_sql::{CodegenParameters, CodegenTable, CodegenTables},
@@ -21,7 +21,8 @@ pub fn get_what_table(
                 Err(anyhow::anyhow!("Unsupported parameter: {}", param_ident))
             }
         }
-        _ => Err(anyhow::anyhow!("Unsupported FROM value: {}", what_value)),
+        Value::Thing(Thing { tb, .. }) => Ok(tb.clone()),
+        _ => Err(anyhow::anyhow!("Unsupported FROM value: {:#?}", what_value)),
     }?;
 
     let table = schema

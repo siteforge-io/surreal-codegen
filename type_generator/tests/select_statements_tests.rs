@@ -35,7 +35,8 @@ SELECT
     bool,
     datetime,
     duration,
-    decimal
+    decimal,
+    uuid
 FROM
     user;
 "#;
@@ -47,6 +48,7 @@ DEFINE FIELD bool ON user TYPE bool;
 DEFINE FIELD datetime ON user TYPE datetime;
 DEFINE FIELD duration ON user TYPE duration;
 DEFINE FIELD decimal ON user TYPE decimal;
+DEFINE FIELD uuid ON user TYPE uuid;
 "#;
 
     let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
@@ -63,6 +65,7 @@ DEFINE FIELD decimal ON user TYPE decimal;
                     ("datetime".into(), QueryReturnType::Datetime.into()),
                     ("duration".into(), QueryReturnType::Duration.into()),
                     ("decimal".into(), QueryReturnType::Decimal.into()),
+                    ("uuid".into(), QueryReturnType::Uuid.into()),
                 ]
                 .into()
             ))),]
@@ -418,6 +421,34 @@ DEFINE FIELD tags ON post TYPE array<string>;
                     QueryReturnType::Array(Box::new(QueryReturnType::String.into()))
                 ),]
                 .into()
+            ))),]
+        }
+    );
+
+    Ok(())
+}
+
+#[test]
+fn select_specific_record() -> anyhow::Result<()> {
+    let query_str = r#"
+SELECT
+    name
+FROM
+    user:john
+"#;
+    let schema_str = r#"
+DEFINE TABLE user SCHEMAFULL;
+DEFINE FIELD name ON user TYPE string;
+"#;
+
+    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+
+    assert_eq_sorted!(
+        codegen_info,
+        CodegenInformation {
+            parameters: HashMap::new(),
+            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+                [("name".into(), QueryReturnType::String.into()),].into()
             ))),]
         }
     );

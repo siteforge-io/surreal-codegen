@@ -30,6 +30,8 @@ fn get_select_fields(
         schema,
         variables,
         Some(&select.expr),
-        |_, _| {},
+        |fields, variables| {
+            variables.insert("this".into(), QueryReturnType::Object(fields.clone()));
+        },
     )
 }

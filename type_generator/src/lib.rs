@@ -13,6 +13,7 @@ pub enum QueryReturnType {
     Never,
     Unknown,
     Null,
+    Uuid,
     String,
     Int,
     Float,
@@ -56,9 +57,9 @@ pub fn kind_to_return_type(kind: &Kind) -> Result<QueryReturnType, anyhow::Error
         Kind::Option(kind) => Ok(QueryReturnType::Option(Box::new(kind_to_return_type(
             kind,
         )?))),
+        Kind::Uuid => Ok(QueryReturnType::Uuid),
         Kind::Array(kind, _) => Ok(QueryReturnType::Array(Box::new(kind_to_return_type(kind)?))),
         Kind::Object => Err(anyhow::anyhow!("Object types are not yet supported")),
-        Kind::Uuid => Err(anyhow::anyhow!("UUIDs are not yet supported")),
         Kind::Point => Err(anyhow::anyhow!("Points are not yet supported")),
         Kind::Bytes => Err(anyhow::anyhow!("Bytes is not yet supported")),
         Kind::Geometry(_) => Err(anyhow::anyhow!("Geometry is not yet supported")),

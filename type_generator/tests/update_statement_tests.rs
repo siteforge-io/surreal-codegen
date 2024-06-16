@@ -3,49 +3,13 @@ use std::collections::HashMap;
 use type_generator::{step_3_outputs::CodegenInformation, QueryReturnType};
 
 #[test]
-fn query_with_variable() -> anyhow::Result<()> {
+fn update_statement_with_set_field() -> anyhow::Result<()> {
     let query_str = r#"
-DELETE user RETURN $before;
+UPDATE user:john SET name = "John";
 "#;
     let schema_str = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
-"#;
-
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
-
-    assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-                [(
-                    "before".into(),
-                    QueryReturnType::Object(HashMap::from([
-                        ("id".into(), QueryReturnType::Record(vec!["user".into()])),
-                        ("name".into(), QueryReturnType::String)
-                    ]))
-                )]
-                .into()
-            )))]
-        }
-    );
-
-    Ok(())
-}
-
-#[test]
-fn query_with_variable_with_multiple_returns() -> anyhow::Result<()> {
-    let query_str = r#"
-DELETE user RETURN $before.name AS alias, $before.xyz.baz AS baz
-"#;
-    let schema_str = r#"
-DEFINE TABLE user SCHEMAFULL;
-DEFINE FIELD name ON user TYPE string;
-DEFINE FIELD xyz ON user TYPE record<abc>;
-
-DEFINE TABLE abc SCHEMAFULL;
-DEFINE FIELD baz ON abc TYPE string;
 "#;
 
     let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
@@ -56,7 +20,76 @@ DEFINE FIELD baz ON abc TYPE string;
             parameters: HashMap::new(),
             return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
                 [
-                    ("alias".into(), QueryReturnType::String),
+                    ("id".into(), QueryReturnType::Record(vec!["user".into()])),
+                    ("name".into(), QueryReturnType::String),
+                ]
+                .into()
+            )))]
+        }
+    );
+
+    Ok(())
+}
+
+#[test]
+fn update_return_before() -> anyhow::Result<()> {
+    let query_str = r#"
+UPDATE user:john SET baz = "bar" RETURN BEFORE;
+"#;
+
+    let schema_str = r#"
+DEFINE TABLE user SCHEMAFULL;
+DEFINE FIELD name ON user TYPE string;
+DEFINE FIELD baz ON user TYPE string;
+"#;
+
+    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+
+    assert_eq_sorted!(
+        codegen_info,
+        CodegenInformation {
+            parameters: HashMap::new(),
+            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Either(
+                vec![
+                    QueryReturnType::Object(
+                        [
+                            ("id".into(), QueryReturnType::Record(vec!["user".into()])),
+                            ("name".into(), QueryReturnType::String),
+                            ("baz".into(), QueryReturnType::String),
+                        ]
+                        .into()
+                    ),
+                    QueryReturnType::Null,
+                ]
+            )))]
+        }
+    );
+
+    Ok(())
+}
+
+#[test]
+fn update_return_after() -> anyhow::Result<()> {
+    let query_str = r#"
+UPDATE user:john SET baz = "bar" RETURN AFTER;
+"#;
+
+    let schema_str = r#"
+DEFINE TABLE user SCHEMAFULL;
+DEFINE FIELD name ON user TYPE string;
+DEFINE FIELD baz ON user TYPE string;
+"#;
+
+    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+
+    assert_eq_sorted!(
+        codegen_info,
+        CodegenInformation {
+            parameters: HashMap::new(),
+            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+                [
+                    ("id".into(), QueryReturnType::Record(vec!["user".into()])),
+                    ("name".into(), QueryReturnType::String),
                     ("baz".into(), QueryReturnType::String),
                 ]
                 .into()
@@ -68,13 +101,15 @@ DEFINE FIELD baz ON abc TYPE string;
 }
 
 #[test]
-fn query_with_variable_with_multiple_returns_with_alias() -> anyhow::Result<()> {
+fn update_return_null() -> anyhow::Result<()> {
     let query_str = r#"
-DELETE user RETURN $after
+UPDATE user:john SET baz = "bar" RETURN NULL;
 "#;
+
     let schema_str = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
+DEFINE FIELD baz ON user TYPE string;
 "#;
 
     let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
@@ -83,9 +118,7 @@ DEFINE FIELD name ON user TYPE string;
         codegen_info,
         CodegenInformation {
             parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-                [("after".into(), QueryReturnType::Null)].into()
-            )))]
+            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Null))]
         }
     );
 
@@ -93,16 +126,15 @@ DEFINE FIELD name ON user TYPE string;
 }
 
 #[test]
-fn query_with_this_field() -> anyhow::Result<()> {
+fn update_return_none() -> anyhow::Result<()> {
     let query_str = r#"
-SELECT
-    name,
-    $this.name AS alias
-FROM user;
+UPDATE user:john SET baz = "bar" RETURN NONE;
 "#;
+
     let schema_str = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
+DEFINE FIELD baz ON user TYPE string;
 "#;
 
     let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
@@ -111,13 +143,7 @@ DEFINE FIELD name ON user TYPE string;
         codegen_info,
         CodegenInformation {
             parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-                [
-                    ("name".into(), QueryReturnType::String),
-                    ("alias".into(), QueryReturnType::String),
-                ]
-                .into()
-            )))]
+            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Never))]
         }
     );
 
@@ -125,16 +151,15 @@ DEFINE FIELD name ON user TYPE string;
 }
 
 #[test]
-fn query_with_nested_query_parent_parameter() -> anyhow::Result<()> {
+fn update_return_fields() -> anyhow::Result<()> {
     let query_str = r#"
-SELECT
-    name,
-    ($parent.name) AS alias
-FROM user;
+UPDATE user:john SET baz = "bar" RETURN baz;
 "#;
+
     let schema_str = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
+DEFINE FIELD baz ON user TYPE string;
 "#;
 
     let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
@@ -144,11 +169,7 @@ DEFINE FIELD name ON user TYPE string;
         CodegenInformation {
             parameters: HashMap::new(),
             return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-                [
-                    ("name".into(), QueryReturnType::String),
-                    ("alias".into(), QueryReturnType::String),
-                ]
-                .into()
+                [("baz".into(), QueryReturnType::String)].into()
             )))]
         }
     );

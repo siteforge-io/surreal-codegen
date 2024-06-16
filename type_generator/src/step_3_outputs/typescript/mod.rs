@@ -47,6 +47,7 @@ fn generate_type_definition(return_type: QueryReturnType) -> Result<String, anyh
         QueryReturnType::Duration => Ok("Duration".to_string()),
         QueryReturnType::Decimal => Ok("Decimal".to_string()),
         QueryReturnType::Bool => Ok("boolean".to_string()),
+        QueryReturnType::Uuid => Ok("string".to_string()),
         QueryReturnType::Object(map) => {
             let mut output = String::new();
             output.push_str("{");
