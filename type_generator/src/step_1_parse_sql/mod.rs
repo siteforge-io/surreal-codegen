@@ -1,4 +1,8 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    hash::Hash,
+    sync::{Arc, Mutex},
+};
 
 use surrealdb::sql::{
     parse,
@@ -8,9 +12,37 @@ use surrealdb::sql::{
 
 use crate::{kind_to_return_type, merge_fields, path_to_type, QueryReturnType};
 
-pub type CodegenTables = HashMap<String, CodegenTable>;
+pub type SchemaState = HashMap<String, CodegenTable>;
 pub type TableReturnTypes = HashMap<String, QueryReturnType>;
-pub type CodegenParameters = HashMap<String, QueryReturnType>;
+
+#[derive(Debug, Clone)]
+pub struct ParseState {
+    pub global: Arc<Mutex<HashMap<String, QueryReturnType>>>,
+    pub inferred: Arc<Mutex<HashMap<String, QueryReturnType>>>,
+    pub defined: Arc<Mutex<HashMap<String, QueryReturnType>>>,
+    pub locals: HashMap<String, QueryReturnType>,
+}
+
+impl ParseState {
+    /// Look up a parameter, moving up in the scope chain until it is found
+    pub fn get(&self, param_name: &str) -> Option<QueryReturnType> {
+        if let Some(return_type) = self.locals.get(param_name) {
+            return Some(return_type.clone());
+        } else if let Some(return_type) = self.defined.lock().unwrap().get(param_name) {
+            return Some(return_type.clone());
+        } else if let Some(return_type) = self.inferred.lock().unwrap().get(param_name) {
+            return Some(return_type.clone());
+        } else if let Some(return_type) = self.global.lock().unwrap().get(param_name) {
+            return Some(return_type.clone());
+        }
+
+        None
+    }
+
+    pub fn has(&self, param_name: &str) -> bool {
+        self.get(param_name).is_some()
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CodegenTable {
@@ -22,7 +54,25 @@ pub fn parse_sql(sql: &str) -> Result<Query, surrealdb::error::Db> {
     parse(&sql)
 }
 
-pub fn parse_query(query: &str) -> Result<(Query, CodegenParameters), anyhow::Error> {
+pub fn parse_value_casts(query: &str) -> Result<HashMap<String, QueryReturnType>, anyhow::Error> {
+    let mut parameter_types = HashMap::new();
+
+    for stmt in parse_sql(query)?.into_iter() {
+        match stmt {
+            surrealdb::sql::Statement::Value(Value::Cast(ref cast)) => match *cast.clone() {
+                Cast(kind, Value::Param(Param(param_ident))) => {
+                    parameter_types.insert(param_ident.to_string(), kind_to_return_type(&kind)?);
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+
+    Ok(parameter_types)
+}
+
+pub fn parse_query(query: &str) -> Result<(Statements, ParseState), anyhow::Error> {
     // collect and filter out all the variable castings
     let mut parameter_types = HashMap::new();
     let mut new_query = Vec::new();
@@ -39,7 +89,15 @@ pub fn parse_query(query: &str) -> Result<(Query, CodegenParameters), anyhow::Er
         }
     }
 
-    Ok((Query(Statements(new_query)), parameter_types))
+    Ok((
+        Statements(new_query),
+        ParseState {
+            global: Arc::new(Mutex::new(HashMap::new())),
+            inferred: Arc::new(Mutex::new(HashMap::new())),
+            defined: Arc::new(Mutex::new(parameter_types)),
+            locals: HashMap::new(),
+        },
+    ))
 }
 
 pub fn get_table_definitions(query: &Query) -> Vec<DefineTableStatement> {
@@ -68,7 +126,7 @@ pub fn get_field_definitions(query: &Query) -> Vec<DefineFieldStatement> {
     fields
 }
 
-pub fn get_tables(query: &Query) -> Result<CodegenTables, anyhow::Error> {
+pub fn get_tables(query: &Query) -> Result<SchemaState, anyhow::Error> {
     let mut tables = HashMap::new();
 
     let table_definitions = get_table_definitions(query);

@@ -1,102 +1,124 @@
+use std::collections::HashMap;
+
+use surrealdb::sql::Statements;
+
 use crate::QueryReturnType;
 
 pub struct TypeData {
     pub name: String,
-    pub types: String,
+    pub statements: Statements,
+    pub return_type: Vec<QueryReturnType>,
+    pub variables: HashMap<String, QueryReturnType>,
 }
 
-pub fn generate_header_typescript() -> String {
+pub fn generate_typescript_output(types: &[TypeData]) -> Result<String, anyhow::Error> {
     let mut output = String::new();
-    // output.push_str("// eslint-disable-next-line @typescript-eslint/ban-ts-comment\n");
-    // output.push_str("// @ts-nocheck\n");
+
     output.push_str("import { type RecordId, Surreal } from 'surrealdb.js';\n");
 
-    output
-}
-
-pub fn generate_typescript_output(types: &[TypeData]) -> String {
-    let mut output = String::new();
-
-    for TypeData { types, .. } in types {
-        output.push_str(&types);
-        output.push_str("\n");
-    }
-
-    output.push_str("export class TypedSurreal extends Surreal {\n");
-
-    for TypeData { name, .. } in types {
+    for TypeData {
+        name,
+        statements,
+        return_type,
+        variables,
+    } in types
+    {
         output.push_str(&format!(
-            "    typed(query: typeof {}Query, variables: {}QueryVariables): Promise<{}QueryResult>;\n",
-            name, name, name
+            "export const {}Query = {}\n",
+            name,
+            serde_json::to_string(&statements.to_string())?
         ));
+        output.push_str(&format!("export type {}Result = [{}]\n", name, {
+            let mut output = String::new();
+            for return_type in return_type {
+                output.push_str(&generate_type_definition(return_type)?);
+                output.push_str(",");
+            }
+            output
+        }));
+
+        if variables.len() > 0 {
+            output.push_str(&format!("export type {}Variables = {{", name));
+
+            for (name, return_type) in variables {
+                output.push_str(&format!(
+                    "    {}: {},\n",
+                    name,
+                    generate_type_definition(return_type)?
+                ));
+            }
+
+            output.push_str("}\n");
+        }
     }
 
-    output.push_str(
-        "    typed(query: string, variables: Record<string, unknown>): Promise<unknown[]> {\n",
-    );
-    output.push_str("        return super.query(query, variables);\n");
-    output.push_str("    }\n");
+    output.push_str(&format!("export type Queries = {{\n{}}}\n", {
+        let mut output = String::new();
+        for TypeData {
+            name, variables, ..
+        } in types
+        {
+            let has_variables = variables.len() > 0;
+            output.push_str(&format!(
+                "    [{}Query]: {{variables: {}, result: {}Result }}\n",
+                name,
+                if has_variables {
+                    format!("{}Variables", name)
+                } else {
+                    "never".into()
+                },
+                name,
+            ));
+        }
+        output
+    },));
 
-    output.push_str("};\n");
+    output.push_str(r#"
 
-    output
+type QueryKeys = keyof Queries
+type InferVariables<Q extends keyof Queries> = Queries[Q]["variables"]
+type InferResult<Q extends keyof Queries> = Queries[Q]["result"]
+type QueryWithVariables<Q extends QueryKeys> = InferVariables<Q> extends never ? Q : Q & string
+type QueryWithoutVariables<Q extends QueryKeys> = InferVariables<Q> extends never ? Q : Exclude<Q, string>
+
+Surreal.prototype.typed = function <Q extends keyof Queries, V extends InferVariables<Q>>(query: Q, variables?: V): Promise<InferResult<Q>> {
+    return this.query(query, variables)
 }
 
-pub fn generate_typescript_file(
+declare module "surrealdb.js" {
+    interface Surreal {
+        typed<Q extends QueryKeys>(query: QueryWithVariables<Q>, variables: InferVariables<Q>): Promise<InferResult<Q>>;
+        typed<Q extends QueryKeys>(query: QueryWithoutVariables<Q>): Promise<InferResult<Q>>;
+    }
+}
+"#);
+
+    Ok(output)
+}
+
+pub fn generate_type_info(
     file_name: &str,
     query: &str,
     schema: &str,
+    globals: &HashMap<String, QueryReturnType>,
 ) -> Result<TypeData, anyhow::Error> {
-    // let (query, castings) = crate::step_1_parse_sql::parse_query(query)?;
-    // let schema_query = crate::step_1_parse_sql::parse_sql(schema)?;
-    // let tables = crate::step_1_parse_sql::get_tables(&schema_query)?;
-    // let return_types = crate::step_2_interpret_query::interpret_query(&query, &tables, &castings)?;
-
-    let (parameters, return_types, query) =
-        crate::step_3_outputs::query_to_return_type(query, schema)?;
+    let (return_types, parse_state, statements) =
+        crate::step_3_outputs::query_to_return_type_with_globals(query, schema, globals)?;
 
     let camel_case_file_name = filename_to_camel_case(file_name)?;
 
-    let mut output = String::new();
-    let query_string = serde_json::to_string(&query.to_string())?;
-    output.push_str(&format!(
-        "export const {}Query = {}\n",
-        camel_case_file_name, query_string
-    ));
-    output.push_str(&format!(
-        "export type {}QueryResult = [",
-        camel_case_file_name
-    ));
-
-    for return_type in return_types {
-        output.push_str(&generate_type_definition(return_type)?);
-        output.push_str(",");
-    }
-
-    output.push_str("];\n");
-
-    output.push_str(&format!(
-        "export type {}QueryVariables = {{\n",
-        camel_case_file_name
-    ));
-
-    for (name, return_type) in parameters {
-        output.push_str(&format!(
-            "    {}: {},\n",
-            name,
-            generate_type_definition(return_type)?
-        ));
-    }
-
-    output.push_str("}\n");
+    let mut variables = parse_state.defined.lock().unwrap().clone();
+    variables.extend(parse_state.inferred.lock().unwrap().clone());
 
     Ok(TypeData {
         name: camel_case_file_name,
-        types: output,
+        return_type: return_types,
+        statements,
+        variables,
     })
 }
 
-fn generate_type_definition(return_type: QueryReturnType) -> Result<String, anyhow::Error> {
+fn generate_type_definition(return_type: &QueryReturnType) -> Result<String, anyhow::Error> {
     match return_type {
         QueryReturnType::Any => Ok("any".to_string()),
         QueryReturnType::Number => Ok("number".to_string()),
@@ -127,8 +149,8 @@ fn generate_type_definition(return_type: QueryReturnType) -> Result<String, anyh
             Ok(output)
         }
         QueryReturnType::Array(array) => {
-            let string = generate_type_definition(*array)?;
-            Ok(format!("{}[]", string))
+            let string = generate_type_definition(&**array)?;
+            Ok(format!("Array<{}>", string))
         }
         QueryReturnType::Either(vec) => {
             let mut output = String::new();
@@ -154,7 +176,7 @@ fn generate_type_definition(return_type: QueryReturnType) -> Result<String, anyh
             Ok(output)
         }
         QueryReturnType::Option(optional_value) => {
-            let string = generate_type_definition(*optional_value)?;
+            let string = generate_type_definition(&**optional_value)?;
             Ok(format!("{}|null", string))
         }
     }

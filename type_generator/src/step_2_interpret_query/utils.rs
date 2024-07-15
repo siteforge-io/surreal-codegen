@@ -3,19 +3,19 @@ use std::collections::HashMap;
 use surrealdb::sql::{Param, Part, Thing, Value};
 
 use crate::{
-    step_1_parse_sql::{CodegenParameters, CodegenTable, CodegenTables},
+    step_1_parse_sql::{CodegenTable, ParseState, SchemaState},
     QueryReturnType,
 };
 
 pub fn get_what_table(
     what_value: &Value,
-    variables: &CodegenParameters,
-    schema: &CodegenTables,
+    state: &ParseState,
+    schema: &SchemaState,
 ) -> Result<CodegenTable, anyhow::Error> {
     let table_name = match what_value {
         Value::Table(table) => Ok(table.0.clone()),
         Value::Param(Param(param_ident)) => {
-            if let Some(QueryReturnType::Record(tables)) = variables.get(param_ident.as_str()) {
+            if let Some(QueryReturnType::Record(tables)) = state.get(param_ident.as_str()) {
                 Ok(tables[0].0.clone())
             } else {
                 Err(anyhow::anyhow!("Unsupported parameter: {}", param_ident))

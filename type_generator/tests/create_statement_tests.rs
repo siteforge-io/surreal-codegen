@@ -1,5 +1,4 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use std::collections::HashMap;
 use type_generator::QueryReturnType;
 
 #[test]
@@ -16,25 +15,22 @@ DEFINE FIELD name ON user TYPE string;
 DEFINE FIELD age ON user TYPE number;
 "#;
 
-    let (params, return_types, _) =
+    let (return_types, _, _) =
         type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        (params, return_types),
-        (
-            HashMap::new(),
-            vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-                [
-                    (
-                        "id".into(),
-                        QueryReturnType::Record(vec!["user".into()]).into()
-                    ),
-                    ("name".into(), QueryReturnType::String.into()),
-                    ("age".into(), QueryReturnType::Number.into()),
-                ]
-                .into()
-            )))]
-        )
+        return_types,
+        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+            [
+                (
+                    "id".into(),
+                    QueryReturnType::Record(vec!["user".into()]).into()
+                ),
+                ("name".into(), QueryReturnType::String.into()),
+                ("age".into(), QueryReturnType::Number.into()),
+            ]
+            .into()
+        )))]
     );
 
     Ok(())
@@ -49,15 +45,12 @@ CREATE foo RETURN NONE
 DEFINE TABLE foo SCHEMAFULL;
 "#;
 
-    let (params, return_types, _) =
+    let (return_types, _, _) =
         type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        (params, return_types),
-        (
-            HashMap::new(),
-            vec![QueryReturnType::Array(Box::new(QueryReturnType::Never))]
-        )
+        return_types,
+        vec![QueryReturnType::Array(Box::new(QueryReturnType::Never))]
     );
 
     Ok(())
@@ -72,14 +65,12 @@ CREATE foo RETURN NULL
 DEFINE TABLE foo SCHEMAFULL;
 "#;
 
-    let (params, return_types, _) =
+    let (return_types, _, _) =
         type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+
     assert_eq_sorted!(
-        (params, return_types),
-        (
-            HashMap::new(),
-            vec![QueryReturnType::Array(Box::new(QueryReturnType::Null))]
-        )
+        return_types,
+        vec![QueryReturnType::Array(Box::new(QueryReturnType::Null))]
     );
 
     Ok(())
@@ -94,15 +85,12 @@ CREATE foo RETURN BEFORE
 DEFINE TABLE foo SCHEMAFULL;
 "#;
 
-    let (params, return_types, _) =
+    let (return_types, _, _) =
         type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        (params, return_types),
-        (
-            HashMap::new(),
-            vec![QueryReturnType::Array(Box::new(QueryReturnType::Null))]
-        )
+        return_types,
+        vec![QueryReturnType::Array(Box::new(QueryReturnType::Null))]
     );
 
     Ok(())
@@ -118,24 +106,21 @@ DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let (params, return_types, _) =
+    let (return_types, _, _) =
         type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        (params, return_types),
-        (
-            HashMap::new(),
-            vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-                [
-                    (
-                        "id".into(),
-                        QueryReturnType::Record(vec!["user".into()]).into()
-                    ),
-                    ("name".into(), QueryReturnType::String.into()),
-                ]
-                .into()
-            )))]
-        )
+        return_types,
+        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+            [
+                (
+                    "id".into(),
+                    QueryReturnType::Record(vec!["user".into()]).into()
+                ),
+                ("name".into(), QueryReturnType::String.into()),
+            ]
+            .into()
+        )))]
     );
 
     Ok(())

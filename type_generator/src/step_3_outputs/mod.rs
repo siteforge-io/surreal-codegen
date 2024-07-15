@@ -7,22 +7,31 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use surrealdb::sql::Query;
-pub use typescript::generate_typescript_file;
+use surrealdb::sql::Statements;
 
-use crate::{step_1_parse_sql::CodegenParameters, QueryReturnType};
+use crate::{step_1_parse_sql::ParseState, QueryReturnType};
 
 pub fn query_to_return_type(
     query: &str,
     schema: &str,
-) -> anyhow::Result<(CodegenParameters, Vec<QueryReturnType>, Query)> {
-    let (query, parameters) = crate::step_1_parse_sql::parse_query(query)?;
+) -> anyhow::Result<(Vec<QueryReturnType>, ParseState, Statements)> {
+    query_to_return_type_with_globals(query, schema, &HashMap::new())
+}
+
+pub fn query_to_return_type_with_globals(
+    query: &str,
+    schema: &str,
+    globals: &HashMap<String, QueryReturnType>,
+) -> anyhow::Result<(Vec<QueryReturnType>, ParseState, Statements)> {
+    let (stmts, state) = crate::step_1_parse_sql::parse_query(query)?;
     let schema_query = crate::step_1_parse_sql::parse_sql(schema)?;
     let tables = crate::step_1_parse_sql::get_tables(&schema_query)?;
-    let return_types =
-        crate::step_2_interpret_query::interpret_query(&query, &tables, &parameters)?;
+    state.global.lock().unwrap().extend(globals.clone());
 
-    Ok((parameters, return_types, query))
+    let return_types =
+        crate::step_2_interpret_query::interpret_statements(&stmts, &state, &tables)?;
+
+    Ok((return_types, state, stmts))
 }
 
 pub fn read_surql_files(dir_path: &str) -> io::Result<HashMap<String, String>> {

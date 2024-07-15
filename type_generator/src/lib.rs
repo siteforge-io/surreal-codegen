@@ -59,7 +59,7 @@ pub fn kind_to_return_type(kind: &Kind) -> Result<QueryReturnType, anyhow::Error
         )?))),
         Kind::Uuid => Ok(QueryReturnType::Uuid),
         Kind::Array(kind, _) => Ok(QueryReturnType::Array(Box::new(kind_to_return_type(kind)?))),
-        Kind::Object => Err(anyhow::anyhow!("Object types are not yet supported")),
+        Kind::Object => Ok(QueryReturnType::Any),
         Kind::Point => Err(anyhow::anyhow!("Points are not yet supported")),
         Kind::Bytes => Err(anyhow::anyhow!("Bytes is not yet supported")),
         Kind::Geometry(_) => Err(anyhow::anyhow!("Geometry is not yet supported")),

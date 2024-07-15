@@ -1,5 +1,10 @@
 # `surreal-codegen`
 
+Building into binary CLI
+
+```
+cargo install --path ./surreal-codegen
+```
 
 ### General type handling
 - [x] `Never`
