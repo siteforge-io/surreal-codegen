@@ -41,11 +41,18 @@ pub fn generate_typescript_output(types: &[TypeData]) -> Result<String, anyhow::
             output.push_str(&format!("export type {}Variables = {{", name));
 
             for (name, return_type) in variables {
-                output.push_str(&format!(
-                    "    {}: {},\n",
-                    name,
-                    generate_type_definition(return_type)?
-                ));
+                match return_type {
+                    QueryReturnType::Option(return_type) => output.push_str(&format!(
+                        "    {}?: {},\n",
+                        name,
+                        generate_type_definition(return_type)?
+                    )),
+                    _ => output.push_str(&format!(
+                        "    {}: {},\n",
+                        name,
+                        generate_type_definition(return_type)?
+                    )),
+                };
             }
 
             output.push_str("}\n");
