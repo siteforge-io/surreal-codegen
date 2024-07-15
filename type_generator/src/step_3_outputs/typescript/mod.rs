@@ -177,7 +177,7 @@ fn generate_type_definition(return_type: &QueryReturnType) -> Result<String, any
         }
         QueryReturnType::Option(optional_value) => {
             let string = generate_type_definition(&**optional_value)?;
-            Ok(format!("{}|null", string))
+            Ok(format!("{}|undefined", string))
         }
     }
 }

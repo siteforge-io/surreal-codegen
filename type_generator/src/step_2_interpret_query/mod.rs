@@ -37,7 +37,6 @@ fn get_statement_return_type(
     schema: &SchemaState,
     state: &ParseState,
 ) -> Result<QueryReturnType, anyhow::Error> {
-    println!("{}", stmt.to_string());
     match stmt {
         Statement::Select(select) => get_select_statement_return_type(select, schema, state),
         Statement::Delete(delete) => get_delete_statement_return_type(delete, schema, state),
