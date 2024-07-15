@@ -1,0 +1,9 @@
+[package]
+name = "surreal-codegen"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+type_generator = { path = "../type_generator" }
+anyhow = "1.0.66"
+clap = { version = "4.5.9", features = ["derive"] }

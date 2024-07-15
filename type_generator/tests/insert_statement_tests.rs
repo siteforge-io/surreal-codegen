@@ -1,6 +1,6 @@
 use pretty_assertions_sorted::assert_eq_sorted;
 use std::collections::HashMap;
-use type_generator::{step_3_outputs::CodegenInformation, QueryReturnType};
+use type_generator::QueryReturnType;
 
 // #[test]
 // fn insert_with_single_field() -> anyhow::Result<()> {

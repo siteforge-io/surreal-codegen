@@ -1,6 +1,6 @@
 use pretty_assertions_sorted::assert_eq_sorted;
 use std::collections::HashMap;
-use type_generator::{step_3_outputs::CodegenInformation, QueryReturnType};
+use type_generator::QueryReturnType;
 
 #[test]
 fn simple_create_content_query() -> anyhow::Result<()> {
@@ -16,13 +16,14 @@ DEFINE FIELD name ON user TYPE string;
 DEFINE FIELD age ON user TYPE number;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
                 [
                     (
                         "id".into(),
@@ -32,8 +33,8 @@ DEFINE FIELD age ON user TYPE number;
                     ("age".into(), QueryReturnType::Number.into()),
                 ]
                 .into()
-            )),)]
-        }
+            )))]
+        )
     );
 
     Ok(())
@@ -48,14 +49,15 @@ CREATE foo RETURN NONE
 DEFINE TABLE foo SCHEMAFULL;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Never))]
-        }
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Never))]
+        )
     );
 
     Ok(())
@@ -70,14 +72,14 @@ CREATE foo RETURN NULL
 DEFINE TABLE foo SCHEMAFULL;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
-
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Null))]
-        }
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Null))]
+        )
     );
 
     Ok(())
@@ -92,14 +94,15 @@ CREATE foo RETURN BEFORE
 DEFINE TABLE foo SCHEMAFULL;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Null))]
-        }
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Null))]
+        )
     );
 
     Ok(())
@@ -115,13 +118,14 @@ DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
                 [
                     (
                         "id".into(),
@@ -130,8 +134,8 @@ DEFINE FIELD name ON user TYPE string;
                     ("name".into(), QueryReturnType::String.into()),
                 ]
                 .into()
-            )),)]
-        }
+            )))]
+        )
     );
 
     Ok(())

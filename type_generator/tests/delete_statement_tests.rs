@@ -1,6 +1,6 @@
 use pretty_assertions_sorted::assert_eq_sorted;
 use std::collections::HashMap;
-use type_generator::{step_3_outputs::CodegenInformation, QueryReturnType};
+use type_generator::QueryReturnType;
 
 #[test]
 fn query_with_simple_delete() -> anyhow::Result<()> {
@@ -11,16 +11,15 @@ DELETE FROM user;
 DEFINE TABLE user SCHEMAFULL;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(
-                QueryReturnType::Never.into()
-            )),]
-        }
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Never))]
+        )
     );
 
     Ok(())
@@ -35,14 +34,12 @@ DELETE FROM ONLY user;
 DEFINE TABLE user SCHEMAFULL;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Never,]
-        }
+        (params, return_types),
+        (HashMap::new(), vec![QueryReturnType::Never])
     );
 
     Ok(())
@@ -57,16 +54,15 @@ DELETE user RETURN AFTER;
 DEFINE TABLE user SCHEMAFULL;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(
-                QueryReturnType::Null.into()
-            )),]
-        }
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Null))]
+        )
     );
 
     Ok(())
@@ -82,13 +78,14 @@ DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
                 [
                     (
                         "id".into(),
@@ -98,7 +95,7 @@ DEFINE FIELD name ON user TYPE string;
                 ]
                 .into()
             ))),]
-        }
+        )
     );
 
     Ok(())
@@ -114,16 +111,17 @@ DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-                [("name".into(), QueryReturnType::Null.into()),].into()
-            ))),]
-        }
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+                [("name".to_string(), QueryReturnType::Null)].into()
+            )))]
+        )
     );
 
     Ok(())

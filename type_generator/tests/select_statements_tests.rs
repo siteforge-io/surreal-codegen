@@ -1,7 +1,7 @@
 use pretty_assertions_sorted::assert_eq_sorted;
 use std::collections::HashMap;
 use surrealdb::sql::Table;
-use type_generator::{step_3_outputs::CodegenInformation, QueryReturnType};
+use type_generator::QueryReturnType;
 
 #[test]
 fn query_specific_value() -> anyhow::Result<()> {
@@ -13,14 +13,12 @@ DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::String,]
-        }
+        (params, return_types),
+        (HashMap::new(), vec![QueryReturnType::String])
     );
 
     Ok(())
@@ -51,25 +49,26 @@ DEFINE FIELD decimal ON user TYPE decimal;
 DEFINE FIELD uuid ON user TYPE uuid;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
-    assert_eq!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+    assert_eq_sorted!(
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
                 [
-                    ("name".into(), QueryReturnType::String.into()),
-                    ("age".into(), QueryReturnType::Int.into()),
-                    ("bool".into(), QueryReturnType::Bool.into()),
-                    ("datetime".into(), QueryReturnType::Datetime.into()),
-                    ("duration".into(), QueryReturnType::Duration.into()),
-                    ("decimal".into(), QueryReturnType::Decimal.into()),
-                    ("uuid".into(), QueryReturnType::Uuid.into()),
+                    ("name".to_string(), QueryReturnType::String),
+                    ("age".to_string(), QueryReturnType::Int),
+                    ("bool".to_string(), QueryReturnType::Bool),
+                    ("datetime".to_string(), QueryReturnType::Datetime),
+                    ("duration".to_string(), QueryReturnType::Duration),
+                    ("decimal".to_string(), QueryReturnType::Decimal),
+                    ("uuid".to_string(), QueryReturnType::Uuid),
                 ]
                 .into()
-            ))),]
-        }
+            )))]
+        )
     );
 
     Ok(())
@@ -87,16 +86,18 @@ DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Object(
-                [("name".into(), QueryReturnType::String.into()),].into()
-            ),]
-        }
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Object(HashMap::from([(
+                "name".to_string(),
+                QueryReturnType::String
+            )]))]
+        )
     );
 
     Ok(())
@@ -114,20 +115,20 @@ DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: [(
-                "user".into(),
-                QueryReturnType::Record([Table::from("user")].into())
-            )]
-            .into(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-                [("name".into(), QueryReturnType::String.into()),].into()
-            ))),]
-        }
+        (params, return_types),
+        (
+            HashMap::from([(
+                "user".to_string(),
+                QueryReturnType::Record(vec![Table::from("user")])
+            )]),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+                [("name".to_string(), QueryReturnType::String)].into()
+            )))]
+        )
     );
 
     Ok(())
@@ -151,13 +152,14 @@ DEFINE FIELD abc ON xyz TYPE string;
 DEFINE FIELD user ON xyz TYPE record<user>;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
                 [(
                     "xyz".into(),
                     QueryReturnType::Object(
@@ -179,9 +181,8 @@ DEFINE FIELD user ON xyz TYPE record<user>;
                 ),]
                 .into()
             ))),]
-        }
+        )
     );
-
     Ok(())
 }
 
@@ -197,16 +198,17 @@ DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Object(
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Object(
                 [("foo".into(), QueryReturnType::String.into()),].into()
             ),]
-        }
+        )
     );
 
     Ok(())
@@ -227,16 +229,17 @@ DEFINE TABLE org SCHEMAFULL;
 DEFINE FIELD name ON org TYPE string;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Object(
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Object(
                 [("foo".into(), QueryReturnType::String.into()),].into()
             ),]
-        }
+        )
     );
 
     Ok(())
@@ -252,20 +255,24 @@ DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Object(
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Object(
                 [
-                    ("name".into(), QueryReturnType::String.into()),
-                    ("id".into(), QueryReturnType::Record(vec!["user".into()]))
+                    ("name".to_string(), QueryReturnType::String),
+                    (
+                        "id".to_string(),
+                        QueryReturnType::Record(vec!["user".into()])
+                    )
                 ]
                 .into()
             ),]
-        }
+        )
     );
 
     Ok(())
@@ -300,13 +307,14 @@ DEFINE FIELD abc ON xyz TYPE option<string>;
 DEFINE FIELD abc2 ON xyz TYPE option<string>;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Object(
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Object(
                 [
                     (
                         "name".into(),
@@ -358,7 +366,7 @@ DEFINE FIELD abc2 ON xyz TYPE option<string>;
                 ]
                 .into()
             ),]
-        }
+        )
     );
 
     Ok(())
@@ -377,20 +385,21 @@ DEFINE TABLE post SCHEMAFULL;
 DEFINE FIELD tags ON post TYPE array<string>;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
                 [(
                     "tags".into(),
                     QueryReturnType::Array(Box::new(QueryReturnType::String.into()))
                 ),]
                 .into()
             ))),]
-        }
+        )
     );
 
     Ok(())
@@ -409,20 +418,21 @@ DEFINE TABLE post SCHEMAFULL;
 DEFINE FIELD tags ON post TYPE array<string>;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
                 [(
                     "tags".into(),
                     QueryReturnType::Array(Box::new(QueryReturnType::String.into()))
                 ),]
                 .into()
             ))),]
-        }
+        )
     );
 
     Ok(())
@@ -441,16 +451,17 @@ DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let (params, return_types, _) =
+        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
     assert_eq_sorted!(
-        codegen_info,
-        CodegenInformation {
-            parameters: HashMap::new(),
-            return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-                [("name".into(), QueryReturnType::String.into()),].into()
-            ))),]
-        }
+        (params, return_types),
+        (
+            HashMap::new(),
+            vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+                [("name".to_string(), QueryReturnType::String)].into()
+            )))]
+        )
     );
 
     Ok(())

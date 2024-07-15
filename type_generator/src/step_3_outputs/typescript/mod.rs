@@ -1,14 +1,59 @@
 use crate::QueryReturnType;
 
-pub fn generate_typescript(
+pub struct TypeData {
+    pub name: String,
+    pub types: String,
+}
+
+pub fn generate_header_typescript() -> String {
+    let mut output = String::new();
+    // output.push_str("// eslint-disable-next-line @typescript-eslint/ban-ts-comment\n");
+    // output.push_str("// @ts-nocheck\n");
+    output.push_str("import { type RecordId, Surreal } from 'surrealdb.js';\n");
+
+    output
+}
+
+pub fn generate_typescript_output(types: &[TypeData]) -> String {
+    let mut output = String::new();
+
+    for TypeData { types, .. } in types {
+        output.push_str(&types);
+        output.push_str("\n");
+    }
+
+    output.push_str("export class TypedSurreal extends Surreal {\n");
+
+    for TypeData { name, .. } in types {
+        output.push_str(&format!(
+            "    typed(query: typeof {}Query, variables: {}QueryVariables): Promise<{}QueryResult>;\n",
+            name, name, name
+        ));
+    }
+
+    output.push_str(
+        "    typed(query: string, variables: Record<string, unknown>): Promise<unknown[]> {\n",
+    );
+    output.push_str("        return super.query(query, variables);\n");
+    output.push_str("    }\n");
+
+    output.push_str("};\n");
+
+    output
+}
+
+pub fn generate_typescript_file(
     file_name: &str,
     query: &str,
     schema: &str,
-) -> Result<String, anyhow::Error> {
-    let (query, castings) = crate::step_1_parse_sql::parse_query(query)?;
-    let schema_query = crate::step_1_parse_sql::parse_sql(schema)?;
-    let tables = crate::step_1_parse_sql::get_tables(&schema_query)?;
-    let return_types = crate::step_2_interpret_query::interpret_query(&query, &tables, &castings)?;
+) -> Result<TypeData, anyhow::Error> {
+    // let (query, castings) = crate::step_1_parse_sql::parse_query(query)?;
+    // let schema_query = crate::step_1_parse_sql::parse_sql(schema)?;
+    // let tables = crate::step_1_parse_sql::get_tables(&schema_query)?;
+    // let return_types = crate::step_2_interpret_query::interpret_query(&query, &tables, &castings)?;
+
+    let (parameters, return_types, query) =
+        crate::step_3_outputs::query_to_return_type(query, schema)?;
 
     let camel_case_file_name = filename_to_camel_case(file_name)?;
 
@@ -28,9 +73,27 @@ pub fn generate_typescript(
         output.push_str(",");
     }
 
-    output.push_str("]");
+    output.push_str("];\n");
 
-    Ok(output)
+    output.push_str(&format!(
+        "export type {}QueryVariables = {{\n",
+        camel_case_file_name
+    ));
+
+    for (name, return_type) in parameters {
+        output.push_str(&format!(
+            "    {}: {},\n",
+            name,
+            generate_type_definition(return_type)?
+        ));
+    }
+
+    output.push_str("}\n");
+
+    Ok(TypeData {
+        name: camel_case_file_name,
+        types: output,
+    })
 }
 
 fn generate_type_definition(return_type: QueryReturnType) -> Result<String, anyhow::Error> {
@@ -79,7 +142,17 @@ fn generate_type_definition(return_type: QueryReturnType) -> Result<String, anyh
             output.push_str(")");
             Ok(output)
         }
-        QueryReturnType::Record(_) => unimplemented!(),
+        QueryReturnType::Record(tables) => {
+            let mut output = String::new();
+            output.push_str("RecordId<");
+
+            for table in tables.iter() {
+                output.push_str(&format!(" |'{}'", table.0));
+            }
+
+            output.push_str(">");
+            Ok(output)
+        }
         QueryReturnType::Option(optional_value) => {
             let string = generate_type_definition(*optional_value)?;
             Ok(format!("{}|null", string))
