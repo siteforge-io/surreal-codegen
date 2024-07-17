@@ -21,6 +21,11 @@ pub fn get_create_statement_return_type(
         Some(Output::None) => QueryReturnType::Never,
         Some(Output::Diff) => Err(anyhow::anyhow!("Create with returned diff not supported"))?,
         Some(Output::Fields(fields)) => get_create_fields(create, schema, state, Some(fields))?,
+        #[allow(unreachable_patterns)]
+        _ => Err(anyhow::anyhow!(format!(
+            "Unknown CREATE statement type: {}",
+            create
+        )))?,
     };
 
     if is_only {

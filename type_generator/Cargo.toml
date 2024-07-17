@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-surrealdb = "1.4.2"
+# surrealdb = "1.5.4"
+surrealdb = { version = "1.5.4", features = ["sql2", "kv-mem"] } # do we remove kv-mem?
 anyhow = "1.0.83"
 serde_json = "1.0.117"
 

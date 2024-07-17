@@ -22,6 +22,11 @@ pub fn get_delete_statement_return_type(
         Some(Output::Fields(fields)) => get_delete_fields(delete, schema, state, Some(fields))?,
         Some(Output::None) => QueryReturnType::Never,
         None => QueryReturnType::Never,
+        #[allow(unreachable_patterns)]
+        _ => Err(anyhow::anyhow!(format!(
+            "Unknown DELETE statement type: {}",
+            delete
+        )))?,
     };
 
     if is_only {

@@ -31,7 +31,8 @@ SELECT
     datetime,
     duration,
     decimal,
-    uuid
+    uuid,
+    number
 FROM
     user;
 "#;
@@ -44,6 +45,7 @@ DEFINE FIELD datetime ON user TYPE datetime;
 DEFINE FIELD duration ON user TYPE duration;
 DEFINE FIELD decimal ON user TYPE decimal;
 DEFINE FIELD uuid ON user TYPE uuid;
+DEFINE FIELD number ON user TYPE number;
 "#;
 
     let (return_types, _, _) =
@@ -60,6 +62,7 @@ DEFINE FIELD uuid ON user TYPE uuid;
                 ("duration".to_string(), QueryReturnType::Duration),
                 ("decimal".to_string(), QueryReturnType::Decimal),
                 ("uuid".to_string(), QueryReturnType::Uuid),
+                ("number".to_string(), QueryReturnType::Number),
             ]
             .into()
         )))]

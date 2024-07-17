@@ -6,7 +6,7 @@ Building into binary CLI
 cargo install --path ./surreal-codegen
 ```
 
-### General type handling
+### General Type Support and Handling
 - [x] `Never`
 - [x] `Unknown`
 - [x] `String`
@@ -20,9 +20,17 @@ cargo install --path ./surreal-codegen
 - [x] `Option`
 - [x] `Array`
 - [x] `Object`
-  - [x] `Null` (for `Option`)
+- [x] `Number`
+- [x] `Null` (for `Option`)
+- [x] `Any`
+- [x] `None`
 - [x] `Either` (mixed return types)
 
+## Automatic Parameter Inference
+- [ ] `WHERE foo = $bar` parameter inference
+- [ ] Function call parameter inference
+- [ ] `SET foo = $bar` parameter inference
+- [ ] `CONTENT { foo: $bar }` parameter inference
 
 ### `SELECT` statements
 - [x] All fields
@@ -30,8 +38,8 @@ cargo install --path ./surreal-codegen
 - [x] Fields with aliases
 - [x] `FROM` targets
 - [x] `VALUE`
-- [ ] `WHERE` automatic parameter inference
-- [ ] `GROUP BY`
+- [x] `GROUP BY`
+- [x] `GROUP ALL`
 - [ ] `SPLIT` fields
 - [ ] `FETCH` fields
 
@@ -43,9 +51,15 @@ cargo install --path ./surreal-codegen
 - [x] `RETRUN @statement_param` with `$before` field access
 
 ### `INSERT` statements
-
+- [ ] TODO
 
 ### `RELATE` statements
+- [ ] TODO
+
+### `DEFINE TABLE .. AS` precomputed tables
+- [X] `DEFINE TABLE foo AS SELECT ... FROM bar`
+- [X] `DEFINE TABLE foo AS SELECT ... FROM bar GROUP BY ...`
+- [X] `DEFINE TABLE foo AS SELECT ... FROM bar GROUP ALL`
 
 
 ### `UPDATE` statements
@@ -93,20 +107,22 @@ cargo install --path ./surreal-codegen
 - [ ] `INSERT` statements
 - [x] `UPDATE` statements
 - [x] `CREATE` statements
+- [ ] `RELATE` statements
 
 ### Parameter expressions
-- [x] custom `$params`
-- [ ] built-in parameters
+- [x] Custom global `$param` definitions in a `global.surql` file
+  - [x] `$auth`
+  - [x] `$session`
+  - [x] `$scope`
+  - [x] `$input`
+  - [x] `$token`
+- [-] built-in parameters
   - [x] `$this`
   - [x] `$parent`
   - [x] `$after`
   - [x] `$before`
-  - [ ] `$auth`
-  - [ ] `$session`
-  - [ ] `$scope`
-  - [ ] `$input`
-  - [ ] `$token`
-- [ ] Automatic parameter inference
+  - [ ]
+- [ ] Automatic parameter inference in some cases
 
 ### Other Statements
 - [ ] `IF ELSE`

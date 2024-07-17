@@ -7,14 +7,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use surrealdb::sql::Statements;
+use surrealdb::sql::Statement;
 
 use crate::{step_1_parse_sql::ParseState, QueryReturnType};
 
 pub fn query_to_return_type(
     query: &str,
     schema: &str,
-) -> anyhow::Result<(Vec<QueryReturnType>, ParseState, Statements)> {
+) -> anyhow::Result<(Vec<QueryReturnType>, ParseState, Vec<Statement>)> {
     query_to_return_type_with_globals(query, schema, &HashMap::new())
 }
 
@@ -22,7 +22,7 @@ pub fn query_to_return_type_with_globals(
     query: &str,
     schema: &str,
     globals: &HashMap<String, QueryReturnType>,
-) -> anyhow::Result<(Vec<QueryReturnType>, ParseState, Statements)> {
+) -> anyhow::Result<(Vec<QueryReturnType>, ParseState, Vec<Statement>)> {
     let (stmts, state) = crate::step_1_parse_sql::parse_query(query)?;
     let schema_query = crate::step_1_parse_sql::parse_sql(schema)?;
     let tables = crate::step_1_parse_sql::get_tables(&schema_query)?;

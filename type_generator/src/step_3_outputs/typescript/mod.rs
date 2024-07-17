@@ -43,12 +43,12 @@ pub fn generate_typescript_output(types: &[TypeData]) -> Result<String, anyhow::
             for (name, return_type) in variables {
                 match return_type {
                     QueryReturnType::Option(return_type) => output.push_str(&format!(
-                        "    {}?: {},\n",
+                        "    {}?: {},",
                         name,
                         generate_type_definition(return_type)?
                     )),
                     _ => output.push_str(&format!(
-                        "    {}: {},\n",
+                        "    {}: {},",
                         name,
                         generate_type_definition(return_type)?
                     )),
@@ -120,7 +120,11 @@ pub fn generate_type_info(
     Ok(TypeData {
         name: camel_case_file_name,
         return_type: return_types,
-        statements,
+        statements: {
+            let mut s = Statements::default();
+            s.0 = statements;
+            s
+        },
         variables,
     })
 }

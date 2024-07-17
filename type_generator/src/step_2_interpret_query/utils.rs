@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use surrealdb::sql::{Param, Part, Thing, Value};
+use surrealdb::sql::{Ident, Param, Part, Thing, Value};
 
 use crate::{
     step_1_parse_sql::{CodegenTable, ParseState, SchemaState},
@@ -14,7 +14,10 @@ pub fn get_what_table(
 ) -> Result<CodegenTable, anyhow::Error> {
     let table_name = match what_value {
         Value::Table(table) => Ok(table.0.clone()),
-        Value::Param(Param(param_ident)) => {
+        Value::Param(Param {
+            0: Ident { 0: param_ident, .. },
+            ..
+        }) => {
             if let Some(QueryReturnType::Record(tables)) = state.get(param_ident.as_str()) {
                 Ok(tables[0].0.clone())
             } else {

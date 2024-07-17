@@ -24,6 +24,11 @@ pub fn get_update_statement_return_type(
         Some(Output::Diff) => Err(anyhow::anyhow!("Update with returned diff not supported"))?,
         Some(Output::Fields(fields)) => get_update_fields(update, schema, state, Some(fields))?,
         Some(Output::None) => QueryReturnType::Never,
+        #[allow(unreachable_patterns)]
+        _ => Err(anyhow::anyhow!(format!(
+            "Unknown UPDATE statement type: {}",
+            update
+        )))?,
     };
 
     if is_only {

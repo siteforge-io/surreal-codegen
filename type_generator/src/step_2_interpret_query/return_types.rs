@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use surrealdb::sql::{Field, Fields, Ident, Idiom, Param, Part, Value};
+use surrealdb::sql::{
+    Constant, Expression, Field, Fields, Ident, Idiom, Operator, Param, Part, Value,
+};
 
 use crate::{
     step_1_parse_sql::{ParseState, SchemaState},
@@ -8,6 +10,7 @@ use crate::{
 };
 
 use super::{
+    function::get_function_return_type,
     get_subquery_return_type,
     utils::{get_what_table, merge_into_map_recursively},
 };
@@ -62,16 +65,20 @@ pub fn get_fields_return_values(
 ) -> Result<QueryReturnType, anyhow::Error> {
     match fields {
         // returning a single value with `VALUE`
-        Fields(fields, true) => {
-            Ok(
-                get_field_return_type(&fields[0], &field_types, &schema, state)?
-                    .pop()
-                    .unwrap()
-                    .1,
-            )
-        }
+        Fields {
+            0: fields, 1: true, ..
+        } => Ok(
+            get_field_return_type(&fields[0], &field_types, &schema, state)?
+                .pop()
+                .unwrap()
+                .1,
+        ),
         // returning multiple values (object map)
-        Fields(fields, false) => {
+        Fields {
+            0: fields,
+            1: false,
+            ..
+        } => {
             let mut map = HashMap::new();
 
             for field in fields {
@@ -99,31 +106,35 @@ pub fn get_field_return_type(
             alias: Some(alias),
         } => Ok(vec![(
             alias.clone(),
-            get_expression_return_type(expr, field_types, schema, state)?,
+            get_value_return_type(expr, field_types, schema, state)?,
         )]),
         Field::Single { expr, alias: None } => Ok(vec![(
             expr.to_idiom(),
-            get_expression_return_type(expr, field_types, schema, state)?,
+            get_value_return_type(expr, field_types, schema, state)?,
         )]),
         Field::All => {
             let mut results = vec![];
             for (field_name, field_type) in field_types {
-                let idiom = Idiom(vec![Part::Field(Ident(field_name.clone()))]);
-                results.push((idiom, field_type.clone().into()));
+                results.push((
+                    vec![Part::Field(Ident::from(field_name.clone()))].into(),
+                    field_type.clone(),
+                ));
             }
             Ok(results)
         }
+        #[allow(unreachable_patterns)]
+        _ => anyhow::bail!("Unsupported field: {}", field),
     }
 }
 
-pub fn get_expression_return_type(
+pub fn get_value_return_type(
     expr: &Value,
     field_types: &HashMap<String, QueryReturnType>,
     schema: &SchemaState,
     state: &ParseState,
 ) -> Result<QueryReturnType, anyhow::Error> {
-    match expr {
-        Value::Idiom(idiom) => get_field_from_paths(&idiom.0, &field_types, schema, state),
+    Ok(match expr {
+        Value::Idiom(idiom) => get_field_from_paths(&idiom.0, &field_types, schema, state)?,
         Value::Subquery(subquery) => {
             let mut state = state.clone();
 
@@ -131,21 +142,113 @@ pub fn get_expression_return_type(
                 "parent".into(),
                 QueryReturnType::Object(field_types.clone()),
             );
-            get_subquery_return_type(subquery, schema, &state)
+            get_subquery_return_type(subquery, schema, &state)?
         }
-        Value::Param(param) => get_parameter_return_type(param, state),
+        Value::Param(param) => get_parameter_return_type(param, state)?,
         // These constants could potentially be represented as actual constants in the return types
-        Value::Strand(_) => Ok(QueryReturnType::String),
-        Value::Number(_) => Ok(QueryReturnType::Number),
-        Value::Bool(_) => Ok(QueryReturnType::Bool),
-        Value::Null => Ok(QueryReturnType::Null),
-        Value::Datetime(_) => Ok(QueryReturnType::Datetime),
-        Value::Duration(_) => Ok(QueryReturnType::Duration),
-        Value::None => Ok(QueryReturnType::Null),
+        Value::Strand(_) => QueryReturnType::String,
+        Value::Number(_) => QueryReturnType::Number,
+        Value::Bool(_) => QueryReturnType::Bool,
+        Value::Null => QueryReturnType::Null,
+        Value::Datetime(_) => QueryReturnType::Datetime,
+        Value::Duration(_) => QueryReturnType::Duration,
+        Value::None => QueryReturnType::Null,
+        Value::Function(func) => get_function_return_type(&func)?,
+        Value::Expression(expr) => get_expression_return_type(expr, field_types, schema, state)?,
         Value::Array(_) => anyhow::bail!("Arrays are not yet supported"),
         Value::Object(_) => anyhow::bail!("Objects are not yet supported"),
-        _ => Err(anyhow::anyhow!("Unsupported expression: {}", expr)),
-    }
+        Value::Constant(constant) => match constant {
+            Constant::MathE
+            | Constant::MathFrac1Pi
+            | Constant::MathFrac1Sqrt2
+            | Constant::MathFrac2Pi
+            | Constant::MathFrac2SqrtPi
+            | Constant::MathFracPi2
+            | Constant::MathFracPi3
+            | Constant::MathFracPi4
+            | Constant::MathFracPi6
+            | Constant::MathFracPi8
+            | Constant::MathInf
+            | Constant::MathLn10
+            | Constant::MathLn2
+            | Constant::MathLog102
+            | Constant::MathLog10E
+            | Constant::MathLog210
+            | Constant::MathLog2E
+            | Constant::MathPi
+            | Constant::MathSqrt2
+            | Constant::MathTau
+            | Constant::TimeEpoch => QueryReturnType::Number,
+            _ => anyhow::bail!("Unsupported constant: {:?}", constant),
+        },
+        _ => anyhow::bail!("Unsupported value/expression: {}", expr),
+    })
+}
+
+pub fn get_expression_return_type(
+    expr: &Expression,
+    field_types: &HashMap<String, QueryReturnType>,
+    schema: &SchemaState,
+    state: &ParseState,
+) -> Result<QueryReturnType, anyhow::Error> {
+    Ok(match expr {
+        // Unary
+        Expression::Unary {
+            o: Operator::Not, ..
+        } => QueryReturnType::Bool,
+        Expression::Unary {
+            o: Operator::Neg, ..
+        } => anyhow::bail!("Unsupported unary operator"),
+
+        // logical binary expressions
+        Expression::Binary {
+            o: Operator::And, ..
+        } => QueryReturnType::Bool,
+        Expression::Binary {
+            o: Operator::Or, ..
+        } => QueryReturnType::Bool,
+        Expression::Binary {
+            o: Operator::Equal, ..
+        } => QueryReturnType::Bool,
+        Expression::Binary {
+            o: Operator::NotEqual,
+            ..
+        } => QueryReturnType::Bool,
+        Expression::Binary {
+            o: Operator::Exact, ..
+        } => QueryReturnType::Bool,
+
+        // comparison binary expressions
+        Expression::Binary {
+            o: Operator::LessThan,
+            ..
+        } => QueryReturnType::Bool,
+        Expression::Binary {
+            o: Operator::MoreThan,
+            ..
+        } => QueryReturnType::Bool,
+        Expression::Binary {
+            o: Operator::LessThanOrEqual,
+            ..
+        } => QueryReturnType::Bool,
+        Expression::Binary {
+            o: Operator::MoreThanOrEqual,
+            ..
+        } => QueryReturnType::Bool,
+        Expression::Binary {
+            o: Operator::Like, ..
+        } => QueryReturnType::Bool,
+        Expression::Binary {
+            o: Operator::NotLike,
+            ..
+        } => QueryReturnType::Bool,
+
+        // TODO: arithmetic
+        // Expression
+        // TODO: short circuiting
+        // TODO: more (contains, any, etc, outside, inside, fuzzy match)
+        _ => anyhow::bail!("Unsupported expression: {}", expr),
+    })
 }
 
 pub fn get_parameter_return_type(
@@ -154,7 +257,7 @@ pub fn get_parameter_return_type(
 ) -> Result<QueryReturnType, anyhow::Error> {
     match state.get(&param.0 .0) {
         Some(return_type) => Ok(return_type.clone()),
-        None => Err(anyhow::anyhow!("Unknown parameter: {}", param)),
+        None => anyhow::bail!("Unknown parameter: {}", param),
     }
 }
 
@@ -167,15 +270,18 @@ pub fn get_field_from_paths(
     match parts.first() {
         Some(Part::Field(field_name)) => match field_types.get(field_name.as_str()) {
             Some(return_type) => match_return_type(return_type, &parts, field_types, schema, state),
-            None => Err(anyhow::anyhow!("Field not found: {}", field_name)),
+            None => anyhow::bail!("Field not found: {}", field_name),
         },
-        Some(Part::Start(Value::Param(Param(Ident(param_name))))) => match state.get(param_name) {
+        Some(Part::Start(Value::Param(Param {
+            0: Ident { 0: param_name, .. },
+            ..
+        }))) => match state.get(param_name) {
             Some(return_type) => {
                 match_return_type(&return_type, &parts, field_types, schema, state)
             }
-            None => Err(anyhow::anyhow!("Unknown parameter: {}", param_name)),
+            None => anyhow::bail!("Unknown parameter: {}", param_name),
         },
-        Some(_) => Err(anyhow::anyhow!("Unsupported path: {:#?}", parts)),
+        Some(_) => anyhow::bail!("Unsupported path: {:#?}", parts),
         // We're returning an actual object
         None => Ok(QueryReturnType::Object(field_types.clone())),
     }
@@ -209,7 +315,7 @@ pub fn match_return_type(
                         Some(new_schema) => {
                             get_field_from_paths(&parts[1..], &new_schema.fields, schema, state)?
                         }
-                        None => return Err(anyhow::anyhow!("Unknown table: {}", table)),
+                        None => anyhow::bail!("Unknown table: {}", table),
                     };
                     return_types.push(return_type);
                 }
@@ -231,9 +337,7 @@ pub fn match_return_type(
         QueryReturnType::Null => Ok(QueryReturnType::Null),
         QueryReturnType::Uuid => Ok(QueryReturnType::Uuid),
         QueryReturnType::Any => Ok(QueryReturnType::Any),
-        _ => Err(anyhow::anyhow!(
-            "Unsupported return type: {:?}",
-            return_type
-        )),
+        QueryReturnType::Number => Ok(QueryReturnType::Number),
+        _ => anyhow::bail!("Unsupported return type: {:?}", return_type),
     }
 }

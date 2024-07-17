@@ -65,6 +65,8 @@ pub fn kind_to_return_type(kind: &Kind) -> Result<QueryReturnType, anyhow::Error
         Kind::Geometry(_) => Err(anyhow::anyhow!("Geometry is not yet supported")),
         Kind::Set(_, _) => Err(anyhow::anyhow!("Sets are not yet supported")),
         Kind::Either(_) => Err(anyhow::anyhow!("Either is not yet supported")),
+        #[allow(unreachable_patterns)]
+        _ => Err(anyhow::anyhow!("Unknown kind: {:?}", kind)),
     }
 }
 
