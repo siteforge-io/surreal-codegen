@@ -1,10 +1,10 @@
 use pretty_assertions_sorted::assert_eq_sorted;
 use std::collections::HashMap;
-use type_generator::QueryReturnType;
+use type_generator::{step_3_codegen::QueryResult, QueryReturnType};
 
 #[test]
 fn constant_string() -> anyhow::Result<()> {
-    let query_str = r#"
+    let query = r#"
 SELECT
     "foo",
     123,
@@ -14,12 +14,12 @@ SELECT
     NULL
 FROM ONLY foo
 "#;
-    let schema_str = r#"
+    let schema = r#"
 DEFINE TABLE foo SCHEMAFULL;
 "#;
 
-    let (return_types, _, _) =
-        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let QueryResult { return_types, .. } =
+        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,

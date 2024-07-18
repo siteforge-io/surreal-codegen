@@ -5,7 +5,9 @@ edition = "2021"
 
 [dependencies]
 # surrealdb = "1.5.4"
-surrealdb = { version = "1.5.4", features = ["sql2", "kv-mem"] } # do we remove kv-mem?
+# surrealdb = { version = "1.5.4", features = ["sql2", "kv-mem"] } # do we remove kv-mem?
+# wait for https://github.com/surrealdb/surrealdb/pull/4375
+surrealdb = { git = "https://github.com/surrealdb/surrealdb.git", rev = "a5a3545", features = [] }
 anyhow = "1.0.83"
 serde_json = "1.0.117"
 

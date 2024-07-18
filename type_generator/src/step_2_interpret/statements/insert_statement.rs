@@ -1,17 +1,12 @@
 use surrealdb::sql::statements::InsertStatement;
 
-use crate::{
-    step_1_parse_sql::{ParseState, SchemaState},
-    QueryReturnType,
-};
+use crate::{step_2_interpret::schema::QueryState, QueryReturnType};
 
 pub fn get_insert_statement_return_type(
     insert: &InsertStatement,
-    schema: &SchemaState,
-    state: &ParseState,
+    state: &mut QueryState,
 ) -> Result<QueryReturnType, anyhow::Error> {
     let _ = state;
     let _ = insert;
-    let _ = schema;
     unimplemented!()
 }

@@ -2,16 +2,14 @@ use std::collections::HashMap;
 
 use surrealdb::sql::{Ident, Param, Part, Thing, Value};
 
-use crate::{
-    step_1_parse_sql::{CodegenTable, ParseState, SchemaState},
-    QueryReturnType,
-};
+use crate::QueryReturnType;
+
+use super::schema::{InterpretedTable, QueryState};
 
 pub fn get_what_table(
     what_value: &Value,
-    state: &ParseState,
-    schema: &SchemaState,
-) -> Result<CodegenTable, anyhow::Error> {
+    state: &mut QueryState,
+) -> Result<InterpretedTable, anyhow::Error> {
     let table_name = match what_value {
         Value::Table(table) => Ok(table.0.clone()),
         Value::Param(Param {
@@ -28,11 +26,7 @@ pub fn get_what_table(
         _ => Err(anyhow::anyhow!("Unsupported FROM value: {:#?}", what_value)),
     }?;
 
-    let table = schema
-        .get(&table_name)
-        .ok_or_else(|| anyhow::anyhow!("Unknown table: {}", table_name))?;
-
-    Ok(table.clone())
+    Ok(state.table(&table_name)?)
 }
 
 pub fn merge_into_map_recursively(

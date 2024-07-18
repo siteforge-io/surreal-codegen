@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use type_generator::QueryReturnType;
+use type_generator::{QueryResult, QueryReturnType};
 
 #[test]
 fn precomputed_views() -> anyhow::Result<()> {
@@ -14,7 +14,8 @@ FROM foo;
 
     let query = r#"SELECT * FROM baz;"#;
 
-    let (return_types, _, _) = type_generator::step_3_outputs::query_to_return_type(query, schema)?;
+    let QueryResult { return_types, .. } =
+        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -51,7 +52,8 @@ SELECT num, five FROM baz;
 SELECT * FROM baz;
 "#;
 
-    let (return_types, _, _) = type_generator::step_3_outputs::query_to_return_type(query, schema)?;
+    let QueryResult { return_types, .. } =
+        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,

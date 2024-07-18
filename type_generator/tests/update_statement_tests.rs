@@ -1,18 +1,18 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use type_generator::QueryReturnType;
+use type_generator::{QueryResult, QueryReturnType};
 
 #[test]
 fn update_statement_with_set_field() -> anyhow::Result<()> {
-    let query_str = r#"
+    let query = r#"
 UPDATE user:john SET name = "John";
 "#;
-    let schema_str = r#"
+    let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let (return_types, _, _) =
-        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let QueryResult { return_types, .. } =
+        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -30,17 +30,17 @@ DEFINE FIELD name ON user TYPE string;
 
 #[test]
 fn update_return_before() -> anyhow::Result<()> {
-    let query_str = r#"
+    let query = r#"
 UPDATE user:john SET baz = "bar" RETURN BEFORE;
 "#;
 
-    let schema_str = r#"
+    let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 DEFINE FIELD baz ON user TYPE string;
 "#;
-    let (return_types, _, _) =
-        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let QueryResult { return_types, .. } =
+        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -64,18 +64,18 @@ DEFINE FIELD baz ON user TYPE string;
 
 #[test]
 fn update_return_after() -> anyhow::Result<()> {
-    let query_str = r#"
+    let query = r#"
 UPDATE user:john SET baz = "bar" RETURN AFTER;
 "#;
 
-    let schema_str = r#"
+    let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 DEFINE FIELD baz ON user TYPE string;
 "#;
 
-    let (return_types, _, _) =
-        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let QueryResult { return_types, .. } =
+        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -94,18 +94,18 @@ DEFINE FIELD baz ON user TYPE string;
 
 #[test]
 fn update_return_null() -> anyhow::Result<()> {
-    let query_str = r#"
+    let query = r#"
 UPDATE user:john SET baz = "bar" RETURN NULL;
 "#;
 
-    let schema_str = r#"
+    let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 DEFINE FIELD baz ON user TYPE string;
 "#;
 
-    let (return_types, _, _) =
-        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let QueryResult { return_types, .. } =
+        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -117,18 +117,18 @@ DEFINE FIELD baz ON user TYPE string;
 
 #[test]
 fn update_return_none() -> anyhow::Result<()> {
-    let query_str = r#"
+    let query = r#"
 UPDATE user:john SET baz = "bar" RETURN NONE;
 "#;
 
-    let schema_str = r#"
+    let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 DEFINE FIELD baz ON user TYPE string;
 "#;
 
-    let (return_types, _, _) =
-        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let QueryResult { return_types, .. } =
+        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -140,18 +140,18 @@ DEFINE FIELD baz ON user TYPE string;
 
 #[test]
 fn update_return_fields() -> anyhow::Result<()> {
-    let query_str = r#"
+    let query = r#"
 UPDATE user:john SET baz = "bar" RETURN baz;
 "#;
 
-    let schema_str = r#"
+    let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 DEFINE FIELD baz ON user TYPE string;
 "#;
 
-    let (return_types, _, _) =
-        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let QueryResult { return_types, .. } =
+        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,

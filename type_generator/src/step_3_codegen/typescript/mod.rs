@@ -1,8 +1,11 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use surrealdb::sql::Statements;
 
-use crate::QueryReturnType;
+use crate::{step_2_interpret::SchemaState, QueryReturnType};
 
 pub struct TypeData {
     pub name: String,
@@ -106,26 +109,20 @@ declare module "surrealdb.js" {
 pub fn generate_type_info(
     file_name: &str,
     query: &str,
-    schema: &str,
-    globals: &HashMap<String, QueryReturnType>,
+    state: Arc<Mutex<SchemaState>>,
 ) -> Result<TypeData, anyhow::Error> {
-    let (return_types, parse_state, statements) =
-        crate::step_3_outputs::query_to_return_type_with_globals(query, schema, globals)?;
-
+    let result = crate::step_3_codegen::output_query_type(query, state)?;
     let camel_case_file_name = filename_to_camel_case(file_name)?;
-
-    let mut variables = parse_state.defined.lock().unwrap().clone();
-    variables.extend(parse_state.inferred.lock().unwrap().clone());
 
     Ok(TypeData {
         name: camel_case_file_name,
-        return_type: return_types,
+        return_type: result.return_types,
         statements: {
             let mut s = Statements::default();
-            s.0 = statements;
+            s.0 = result.statements;
             s
         },
-        variables,
+        variables: result.variables,
     })
 }
 

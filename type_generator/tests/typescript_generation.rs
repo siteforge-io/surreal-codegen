@@ -2,10 +2,10 @@
 
 // #[test]
 // fn can_generate_typescript_for_select_query_with_value() -> anyhow::Result<()> {
-//     let query_str = r#"
+//     let query = r#"
 // SELECT VALUE name FROM user
 // "#;
-//     let schema_str = r#"
+//     let schema = r#"
 // DEFINE TABLE user SCHEMAFULL;
 // DEFINE FIELD name ON user TYPE string;
 // "#;
@@ -25,10 +25,10 @@
 
 // #[test]
 // fn can_generate_typescript_for_select_query_with_multiple_fields() -> anyhow::Result<()> {
-//     let query_str = r#"
+//     let query = r#"
 // SELECT name, age FROM user
 // "#;
-//     let schema_str = r#"
+//     let schema = r#"
 // DEFINE TABLE user SCHEMAFULL;
 // DEFINE FIELD name ON user TYPE string;
 // DEFINE FIELD age ON user TYPE int;
@@ -49,12 +49,12 @@
 
 // #[test]
 // fn select_query_with_parameter_record() -> anyhow::Result<()> {
-//     let query_str = r#"
+//     let query = r#"
 // <record<user>> $user;
 
 // SELECT name FROM $user
 // "#;
-//     let schema_str = r#"
+//     let schema = r#"
 // DEFINE TABLE user SCHEMAFULL;
 // DEFINE FIELD name ON user TYPE string;
 // "#;
@@ -74,7 +74,7 @@
 
 // #[test]
 // fn select_query_with_nested_fields_and_weird_idioms() -> anyhow::Result<()> {
-//     let query_str = r#"
+//     let query = r#"
 // SELECT
 //     foo as bar,
 //     baz,
@@ -82,7 +82,7 @@
 // FROM
 //     user;
 // "#;
-//     let schema_str = r#"
+//     let schema = r#"
 // DEFINE TABLE user SCHEMAFULL;
 // DEFINE FIELD foo ON user TYPE string;
 // DEFINE FIELD baz ON user TYPE int;
@@ -107,7 +107,7 @@
 
 // #[test]
 // fn select_query_with_various_primitive_types() -> anyhow::Result<()> {
-//     let query_str = r#"
+//     let query = r#"
 // SELECT
 //     name,
 //     age,
@@ -118,7 +118,7 @@
 // FROM
 //     user;
 // "#;
-//     let schema_str = r#"
+//     let schema = r#"
 // DEFINE TABLE user SCHEMAFULL;
 // DEFINE FIELD name ON user TYPE string;
 // DEFINE FIELD age ON user TYPE int;
@@ -142,12 +142,12 @@
 
 // #[test]
 // fn select_query_with_only_value() -> anyhow::Result<()> {
-//     let query_str = r#"
+//     let query = r#"
 // SELECT
 //     name
 // FROM ONLY user;
 // "#;
-//     let schema_str = r#"
+//     let schema = r#"
 // DEFINE TABLE user SCHEMAFULL;
 // DEFINE FIELD name ON user TYPE string;
 // "#;
@@ -167,13 +167,13 @@
 
 // #[test]
 // fn select_query_with_nested_array_string_field() -> anyhow::Result<()> {
-//     let query_str = r#"
+//     let query = r#"
 // SELECT
 //     tags.*
 // FROM
 //     post;
 // "#;
-//     let schema_str = r#"
+//     let schema = r#"
 // DEFINE TABLE post SCHEMAFULL;
 // DEFINE FIELD tags ON post TYPE array<string>;
 // "#;
@@ -193,7 +193,7 @@
 
 // #[test]
 // fn optional_fields() -> anyhow::Result<()> {
-//     let query_str = r#"
+//     let query = r#"
 // SELECT
 //     name,
 //     age,
@@ -202,7 +202,7 @@
 // FROM
 //     user;
 // "#;
-//     let schema_str = r#"
+//     let schema = r#"
 // DEFINE TABLE user SCHEMAFULL;
 // DEFINE FIELD name ON user TYPE option<string>;
 // DEFINE FIELD age ON user TYPE option<int>;

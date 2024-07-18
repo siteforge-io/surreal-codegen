@@ -5,33 +5,49 @@ use std::{
     fs,
     io::{self, Read},
     path::{Path, PathBuf},
+    sync::{Arc, Mutex},
 };
 
 use surrealdb::sql::Statement;
 
-use crate::{step_1_parse_sql::ParseState, QueryReturnType};
+use crate::{
+    step_2_interpret::{interpret_query, QueryState, SchemaState},
+    QueryReturnType,
+};
 
-pub fn query_to_return_type(
-    query: &str,
-    schema: &str,
-) -> anyhow::Result<(Vec<QueryReturnType>, ParseState, Vec<Statement>)> {
+pub struct QueryResult {
+    pub statements: Vec<Statement>,
+    pub variables: HashMap<String, QueryReturnType>,
+    pub state: QueryState,
+    pub return_types: Vec<QueryReturnType>,
+}
+
+pub fn query_to_return_type(query: &str, schema: &str) -> anyhow::Result<QueryResult> {
     query_to_return_type_with_globals(query, schema, &HashMap::new())
+}
+
+pub fn output_query_type(
+    query: &str,
+    schema: Arc<Mutex<SchemaState>>,
+) -> anyhow::Result<QueryResult> {
+    let parsed_query = crate::step_1_parse_sql::parse_query(query)?;
+    let mut query_state = QueryState::new(schema, parsed_query.casted_parameters);
+
+    Ok(QueryResult {
+        return_types: interpret_query(&parsed_query.statements, &mut query_state)?,
+        statements: parsed_query.statements,
+        variables: query_state.extract_required_variables(),
+        state: query_state,
+    })
 }
 
 pub fn query_to_return_type_with_globals(
     query: &str,
     schema: &str,
     globals: &HashMap<String, QueryReturnType>,
-) -> anyhow::Result<(Vec<QueryReturnType>, ParseState, Vec<Statement>)> {
-    let (stmts, state) = crate::step_1_parse_sql::parse_query(query)?;
-    let schema_query = crate::step_1_parse_sql::parse_sql(schema)?;
-    let tables = crate::step_1_parse_sql::get_tables(&schema_query)?;
-    state.global.lock().unwrap().extend(globals.clone());
-
-    let return_types =
-        crate::step_2_interpret_query::interpret_statements(&stmts, &state, &tables)?;
-
-    Ok((return_types, state, stmts))
+) -> anyhow::Result<QueryResult> {
+    let state = crate::step_2_interpret::interpret_schema(schema, globals.clone())?;
+    output_query_type(query, Arc::new(Mutex::new(state)))
 }
 
 pub fn read_surql_files(dir_path: &str) -> io::Result<HashMap<String, String>> {

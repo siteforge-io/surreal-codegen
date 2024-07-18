@@ -1,35 +1,32 @@
 use std::collections::{HashMap, HashSet};
 
 use surrealdb::sql::{
-    Constant, Expression, Field, Fields, Ident, Idiom, Operator, Param, Part, Value,
+    Cast, Constant, Expression, Field, Fields, Ident, Idiom, Operator, Param, Part, Value,
 };
 
-use crate::{
-    step_1_parse_sql::{ParseState, SchemaState},
-    QueryReturnType,
-};
+use crate::{kind_to_return_type, QueryReturnType};
 
 use super::{
     function::get_function_return_type,
     get_subquery_return_type,
+    schema::QueryState,
     utils::{get_what_table, merge_into_map_recursively},
 };
 
 pub fn get_statement_fields<F>(
     what: &[Value],
-    schema: &SchemaState,
-    state: &ParseState,
+    state: &mut QueryState,
     fields: Option<&Fields>,
     get_field_and_variables: F,
 ) -> Result<QueryReturnType, anyhow::Error>
 where
-    F: Fn(&mut HashMap<String, QueryReturnType>, &mut ParseState) -> (),
+    F: Fn(&mut HashMap<String, QueryReturnType>, &mut QueryState) -> (),
 {
     let mut return_types = Vec::new();
     let mut used_tables = HashSet::new();
 
     for value in what.iter() {
-        let table = get_what_table(value, state, schema)?;
+        let table = get_what_table(value, state)?;
 
         if used_tables.contains(&table.name) {
             continue;
@@ -37,12 +34,12 @@ where
         used_tables.insert(table.name.clone());
 
         let return_type = if let Some(fields) = fields {
-            let mut state = state.clone();
+            state.push_stack_frame();
             let mut table_fields = table.fields.clone();
 
-            get_field_and_variables(&mut table_fields, &mut state);
+            get_field_and_variables(&mut table_fields, state);
 
-            get_fields_return_values(fields, &table_fields, schema, &mut state)?
+            get_fields_return_values(fields, &table_fields, state)?
         } else {
             QueryReturnType::Object(table.fields.clone())
         };
@@ -60,19 +57,16 @@ where
 pub fn get_fields_return_values(
     fields: &Fields,
     field_types: &HashMap<String, QueryReturnType>,
-    schema: &SchemaState,
-    state: &ParseState,
+    state: &mut QueryState,
 ) -> Result<QueryReturnType, anyhow::Error> {
     match fields {
         // returning a single value with `VALUE`
         Fields {
             0: fields, 1: true, ..
-        } => Ok(
-            get_field_return_type(&fields[0], &field_types, &schema, state)?
-                .pop()
-                .unwrap()
-                .1,
-        ),
+        } => Ok(get_field_return_type(&fields[0], &field_types, state)?
+            .pop()
+            .unwrap()
+            .1),
         // returning multiple values (object map)
         Fields {
             0: fields,
@@ -82,9 +76,7 @@ pub fn get_fields_return_values(
             let mut map = HashMap::new();
 
             for field in fields {
-                for (idiom, return_type) in
-                    get_field_return_type(field, &field_types, &schema, state)?
-                {
+                for (idiom, return_type) in get_field_return_type(field, &field_types, state)? {
                     merge_into_map_recursively(&mut map, &idiom.0, return_type)?;
                 }
             }
@@ -97,8 +89,7 @@ pub fn get_fields_return_values(
 pub fn get_field_return_type(
     field: &Field,
     field_types: &HashMap<String, QueryReturnType>,
-    schema: &SchemaState,
-    state: &ParseState,
+    state: &mut QueryState,
 ) -> Result<Vec<(Idiom, QueryReturnType)>, anyhow::Error> {
     match field {
         Field::Single {
@@ -106,11 +97,11 @@ pub fn get_field_return_type(
             alias: Some(alias),
         } => Ok(vec![(
             alias.clone(),
-            get_value_return_type(expr, field_types, schema, state)?,
+            get_value_return_type(expr, field_types, state)?,
         )]),
         Field::Single { expr, alias: None } => Ok(vec![(
             expr.to_idiom(),
-            get_value_return_type(expr, field_types, schema, state)?,
+            get_value_return_type(expr, field_types, state)?,
         )]),
         Field::All => {
             let mut results = vec![];
@@ -130,19 +121,20 @@ pub fn get_field_return_type(
 pub fn get_value_return_type(
     expr: &Value,
     field_types: &HashMap<String, QueryReturnType>,
-    schema: &SchemaState,
-    state: &ParseState,
+    state: &mut QueryState,
 ) -> Result<QueryReturnType, anyhow::Error> {
     Ok(match expr {
-        Value::Idiom(idiom) => get_field_from_paths(&idiom.0, &field_types, schema, state)?,
+        Value::Idiom(idiom) => get_field_from_paths(&idiom.0, &field_types, state)?,
         Value::Subquery(subquery) => {
-            let mut state = state.clone();
+            state.push_stack_frame();
 
-            state.locals.insert(
-                "parent".into(),
-                QueryReturnType::Object(field_types.clone()),
-            );
-            get_subquery_return_type(subquery, schema, &state)?
+            state.set_local("parent", QueryReturnType::Object(field_types.clone()));
+
+            let return_type = get_subquery_return_type(subquery, state)?;
+
+            state.pop_stack_frame();
+
+            return_type
         }
         Value::Param(param) => get_parameter_return_type(param, state)?,
         // These constants could potentially be represented as actual constants in the return types
@@ -153,8 +145,8 @@ pub fn get_value_return_type(
         Value::Datetime(_) => QueryReturnType::Datetime,
         Value::Duration(_) => QueryReturnType::Duration,
         Value::None => QueryReturnType::Null,
-        Value::Function(func) => get_function_return_type(&func)?,
-        Value::Expression(expr) => get_expression_return_type(expr, field_types, schema, state)?,
+        Value::Function(func) => get_function_return_type(state, &func)?,
+        Value::Expression(expr) => get_expression_return_type(expr, field_types, state)?,
         Value::Array(_) => anyhow::bail!("Arrays are not yet supported"),
         Value::Object(_) => anyhow::bail!("Objects are not yet supported"),
         Value::Constant(constant) => match constant {
@@ -181,15 +173,15 @@ pub fn get_value_return_type(
             | Constant::TimeEpoch => QueryReturnType::Number,
             _ => anyhow::bail!("Unsupported constant: {:?}", constant),
         },
+        Value::Cast(box Cast { 0: kind, .. }) => kind_to_return_type(kind)?,
         _ => anyhow::bail!("Unsupported value/expression: {}", expr),
     })
 }
 
 pub fn get_expression_return_type(
     expr: &Expression,
-    field_types: &HashMap<String, QueryReturnType>,
-    schema: &SchemaState,
-    state: &ParseState,
+    _field_types: &HashMap<String, QueryReturnType>,
+    mut _state: &mut QueryState,
 ) -> Result<QueryReturnType, anyhow::Error> {
     Ok(match expr {
         // Unary
@@ -253,7 +245,7 @@ pub fn get_expression_return_type(
 
 pub fn get_parameter_return_type(
     param: &Param,
-    state: &ParseState,
+    state: &mut QueryState,
 ) -> Result<QueryReturnType, anyhow::Error> {
     match state.get(&param.0 .0) {
         Some(return_type) => Ok(return_type.clone()),
@@ -264,12 +256,11 @@ pub fn get_parameter_return_type(
 pub fn get_field_from_paths(
     parts: &[Part],
     field_types: &HashMap<String, QueryReturnType>,
-    schema: &SchemaState,
-    state: &ParseState,
+    state: &mut QueryState,
 ) -> Result<QueryReturnType, anyhow::Error> {
     match parts.first() {
         Some(Part::Field(field_name)) => match field_types.get(field_name.as_str()) {
-            Some(return_type) => match_return_type(return_type, &parts, field_types, schema, state),
+            Some(return_type) => match_return_type(return_type, &parts, field_types, state),
             None => anyhow::bail!("Field not found: {}", field_name),
         },
         Some(Part::Start(Value::Param(Param {
@@ -277,7 +268,7 @@ pub fn get_field_from_paths(
             ..
         }))) => match state.get(param_name) {
             Some(return_type) => {
-                match_return_type(&return_type, &parts, field_types, schema, state)
+                match_return_type(&return_type.clone(), &parts, field_types, state)
             }
             None => anyhow::bail!("Unknown parameter: {}", param_name),
         },
@@ -291,14 +282,13 @@ pub fn match_return_type(
     return_type: &QueryReturnType,
     parts: &[Part],
     field_types: &HashMap<String, QueryReturnType>,
-    schema: &SchemaState,
-    state: &ParseState,
+    state: &mut QueryState,
 ) -> Result<QueryReturnType, anyhow::Error> {
     let has_next_part = parts.len() > 1;
 
     match return_type {
         QueryReturnType::Object(nested_fields) => {
-            get_field_from_paths(&parts[1..], nested_fields, schema, state)
+            get_field_from_paths(&parts[1..], nested_fields, state)
         }
         QueryReturnType::String => Ok(QueryReturnType::String),
         QueryReturnType::Int => Ok(QueryReturnType::Int),
@@ -311,12 +301,11 @@ pub fn match_return_type(
             if has_next_part {
                 let mut return_types = Vec::new();
                 for table in tables.iter() {
-                    let return_type = match schema.get(table.as_str()) {
-                        Some(new_schema) => {
-                            get_field_from_paths(&parts[1..], &new_schema.fields, schema, state)?
-                        }
-                        None => anyhow::bail!("Unknown table: {}", table),
-                    };
+                    let return_type = get_field_from_paths(
+                        &parts[1..],
+                        &state.table(table.as_str())?.fields.clone(),
+                        state,
+                    )?;
                     return_types.push(return_type);
                 }
                 if return_types.len() == 1 {
@@ -329,10 +318,10 @@ pub fn match_return_type(
             }
         }
         QueryReturnType::Option(return_type) => Ok(QueryReturnType::Option(Box::new(
-            match_return_type(return_type, &parts, field_types, schema, state)?,
+            match_return_type(return_type, &parts, field_types, state)?,
         ))),
         QueryReturnType::Array(return_type) => Ok(QueryReturnType::Array(Box::new(
-            match_return_type(return_type, &parts, field_types, schema, state)?,
+            match_return_type(return_type, &parts, field_types, state)?,
         ))),
         QueryReturnType::Null => Ok(QueryReturnType::Null),
         QueryReturnType::Uuid => Ok(QueryReturnType::Uuid),

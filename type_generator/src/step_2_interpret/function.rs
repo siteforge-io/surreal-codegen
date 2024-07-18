@@ -1,258 +1,29 @@
-// array::add
-// array::all
-// array::any
-// array::append
-// array::at
-// array::boolean_and
-// array::boolean_not
-// array::boolean_or
-// array::boolean_xor
-// array::clump
-// array::combine
-// array::complement
-// array::concat
-// array::difference
-// array::distinct
-// array::filter_index
-// array::find_index
-// array::first
-// array::flatten
-// array::group
-// array::insert
-// array::intersect
-// array::join
-// array::last
-// array::len
-// array::logical_and
-// array::logical_or
-// array::logical_xor
-// array::matches
-// array::max
-// array::min
-// array::pop
-// array::prepend
-// array::push
-// array::remove
-// array::reverse
-// array::shuffle
-// array::slice
-// array::sort
-// array::transpose
-// array::union
-// array::sort::asc
-// array::sort::desc
-// bytes::len
-// count::count
-// crypto::md5
-// crypto::sha1
-// crypto::sha256
-// crypto::sha512
-// duration::days
-// duration::hours
-// duration::micros
-// duration::millis
-// duration::mins
-// duration::nanos
-// duration::secs
-// duration::weeks
-// duration::years
-// duration::from::days
-// duration::from::hours
-// duration::from::micros
-// duration::from::millis
-// duration::from::mins
-// duration::from::nanos
-// duration::from::secs
-// duration::from::weeks
-// encoding::base64::decode
-// encoding::base64::encode
-// geo::area
-// geo::bearing
-// geo::centroid
-// geo::distance
-// geo::hash::decode
-// geo::hash::encode
-
-// not::not
-// object::entries
-// object::from_entries
-// object::keys
-// object::len
-// object::values
-// parse::email::host
-// parse::email::user
-// parse::url::domain
-// parse::url::fragment
-// parse::url::host
-// parse::url::path
-// parse::url::port
-// parse::url::query
-// parse::url::scheme
-// rand::rand
-// rand::bool
-// rand::enum
-// rand::float
-// rand::guid
-// rand::int
-// rand::string
-// rand::time
-// rand::ulid
-// rand::uuid::v4
-// rand::uuid::v7
-// rand::uuid
-// session::ac
-// session::db
-// session::id
-// session::ip
-// session::ns
-// session::origin
-// session::rd
-// session::token
-// string::concat
-// string::contains
-// string::ends_with
-// string::join
-// string::len
-// string::lowercase
-// string::matches
-// string::repeat
-// string::replace
-// string::reverse
-// string::slice
-// string::slug
-// string::split
-// string::starts_with
-// string::trim
-// string::uppercase
-// string::words
-// string::distance::hamming
-// string::distance::levenshtein
-// string::html::encode
-// string::html::sanitize
-// string::is::alphanum
-// string::is::alpha
-// string::is::ascii
-// string::is::datetime
-// string::is::domain
-// string::is::email
-// string::is::hexadecimal
-// string::is::ip
-// string::is::ipv4
-// string::is::ipv6
-// string::is::latitude
-// string::is::longitude
-// string::is::numeric
-// string::is::semver
-// string::is::url
-// string::is::uuid
-// string::similarity::fuzzy
-// string::similarity::jaro
-// string::similarity::smithwaterman
-// string::semver::compare
-// string::semver::major
-// string::semver::minor
-// string::semver::patch
-// string::semver::inc::major
-// string::semver::inc::minor
-// string::semver::inc::patch
-// string::semver::set::major
-// string::semver::set::minor
-// string::semver::set::patch
-// time::ceil
-// time::day
-// time::floor
-// time::format
-// time::group
-// time::hour
-// time::max
-// time::min
-// time::minute
-// time::month
-// time::nano
-// time::micros
-// time::millis
-// time::now
-// time::round
-// time::second
-// time::timezone
-// time::unix
-// time::wday
-// time::week
-// time::yday
-// time::year
-// time::from::nanos
-// time::from::micros
-// time::from::millis
-// time::from::secs
-// time::from::unix
-// type::bool
-// type::datetime
-// type::decimal
-// type::duration
-// type::float
-// type::int
-// type::number
-// type::point
-// type::string
-// type::table
-// type::thing
-// type::range
-// type::is::array
-// type::is::bool
-// type::is::bytes
-// type::is::collection
-// type::is::datetime
-// type::is::decimal
-// type::is::duration
-// type::is::float
-// type::is::geometry
-// type::is::int
-// type::is::line
-// type::is::none
-// type::is::null
-// type::is::multiline
-// type::is::multipoint
-// type::is::multipolygon
-// type::is::number
-// type::is::object
-// type::is::point
-// type::is::polygon
-// type::is::record
-// type::is::string
-// type::is::uuid
-// vector::add
-// vector::angle
-// vector::cross
-// vector::dot
-// vector::divide
-// vector::magnitude
-// vector::multiply
-// vector::normalize
-// vector::project
-// vector::subtract
-// vector::distance::chebyshev
-// vector::distance::euclidean
-// vector::distance::hamming
-// vector::distance::knn
-// vector::distance::mahalanobis
-// vector::distance::manhattan
-// vector::distance::minkowski
-// vector::similarity::cosine
-// vector::similarity::jaccard
-// vector::similarity::pearson
-// vector::similarity::spearman
-
-use surrealdb::sql::Function;
+use surrealdb::sql::{Function, Value};
 
 use crate::QueryReturnType;
 
-pub fn get_function_return_type(func: &Function) -> Result<QueryReturnType, anyhow::Error> {
+use super::QueryState;
+
+pub fn get_function_return_type(
+    state: &mut QueryState,
+    func: &Function,
+) -> Result<QueryReturnType, anyhow::Error> {
     match func {
-        Function::Custom(..) => anyhow::bail!("Custom functions are not yet supported"),
+        Function::Custom(name, values) => get_custom_function_return_type(state, name, values),
         Function::Normal(name, ..) => normal_function_return_type(name),
         Function::Script(..) => anyhow::bail!("Script functions are not yet supported"),
         _ => anyhow::bail!("Unsupported function: {}", func),
     }
+}
+
+pub fn get_custom_function_return_type(
+    state: &mut QueryState,
+    name: &str,
+    _values: &[Value],
+) -> Result<QueryReturnType, anyhow::Error> {
+    let function = state.function(name)?;
+
+    Ok(function.return_type)
 }
 
 pub fn normal_function_return_type(name: &str) -> Result<QueryReturnType, anyhow::Error> {

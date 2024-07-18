@@ -1,19 +1,25 @@
 use pretty_assertions_sorted::assert_eq_sorted;
 use std::collections::HashMap;
-use type_generator::QueryReturnType;
+use type_generator::{QueryResult, QueryReturnType};
 
 #[test]
 fn query_with_variable() -> anyhow::Result<()> {
-    let query_str = r#"
+    let query = r#"
 DELETE user RETURN $before;
 "#;
-    let schema_str = r#"
+    let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let (return_types, _, _) =
-        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let QueryResult {
+        return_types,
+        variables,
+        ..
+    } = type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+    // $before should not be a required variable
+    assert_eq_sorted!(variables, HashMap::from([]));
 
     assert_eq_sorted!(
         return_types,
@@ -34,10 +40,10 @@ DEFINE FIELD name ON user TYPE string;
 
 #[test]
 fn query_with_variable_with_multiple_returns() -> anyhow::Result<()> {
-    let query_str = r#"
+    let query = r#"
 DELETE user RETURN $before.name AS alias, $before.xyz.baz AS baz
 "#;
-    let schema_str = r#"
+    let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 DEFINE FIELD xyz ON user TYPE record<abc>;
@@ -46,8 +52,14 @@ DEFINE TABLE abc SCHEMAFULL;
 DEFINE FIELD baz ON abc TYPE string;
 "#;
 
-    let (return_types, _, _) =
-        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let QueryResult {
+        return_types,
+        variables,
+        ..
+    } = type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+    // $before should not be a required variable
+    assert_eq_sorted!(variables, HashMap::from([]));
 
     assert_eq_sorted!(
         return_types,
@@ -65,16 +77,22 @@ DEFINE FIELD baz ON abc TYPE string;
 
 #[test]
 fn query_with_variable_with_multiple_returns_with_alias() -> anyhow::Result<()> {
-    let query_str = r#"
+    let query = r#"
 DELETE user RETURN $after
 "#;
-    let schema_str = r#"
+    let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let (return_types, _, _) =
-        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let QueryResult {
+        return_types,
+        variables,
+        ..
+    } = type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+    // $after should not be a required variable
+    assert_eq_sorted!(variables, HashMap::from([]));
 
     assert_eq_sorted!(
         return_types,
@@ -88,19 +106,25 @@ DEFINE FIELD name ON user TYPE string;
 
 #[test]
 fn query_with_this_field() -> anyhow::Result<()> {
-    let query_str = r#"
+    let query = r#"
 SELECT
     name,
     $this.name AS alias
 FROM user;
 "#;
-    let schema_str = r#"
+    let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let (return_types, _, _) =
-        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let QueryResult {
+        return_types,
+        variables,
+        ..
+    } = type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+    // $this should not be a required variable
+    assert_eq_sorted!(variables, HashMap::from([]));
 
     assert_eq_sorted!(
         return_types,
@@ -118,19 +142,25 @@ DEFINE FIELD name ON user TYPE string;
 
 #[test]
 fn query_with_nested_query_parent_parameter() -> anyhow::Result<()> {
-    let query_str = r#"
+    let query = r#"
 SELECT
     name,
     ($parent.name) AS alias
 FROM user;
 "#;
-    let schema_str = r#"
+    let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD name ON user TYPE string;
 "#;
 
-    let (return_types, _, _) =
-        type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+    let QueryResult {
+        return_types,
+        variables,
+        ..
+    } = type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+    // $parent should not be a required variable
+    assert_eq_sorted!(variables, HashMap::from([]));
 
     assert_eq_sorted!(
         return_types,

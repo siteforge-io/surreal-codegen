@@ -4,8 +4,10 @@ use std::collections::HashMap;
 
 use surrealdb::sql::{Kind, Part, Table};
 pub mod step_1_parse_sql;
-pub mod step_2_interpret_query;
-pub mod step_3_outputs;
+pub mod step_2_interpret;
+pub mod step_3_codegen;
+
+pub use step_3_codegen::QueryResult;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum QueryReturnType {
@@ -33,41 +35,36 @@ impl QueryReturnType {
     pub fn expect_option(self) -> Result<QueryReturnType, anyhow::Error> {
         match self {
             QueryReturnType::Option(return_type) => Ok(*return_type),
-            _ => Err(anyhow::anyhow!(
-                "Expected an option type, but got: {:?}",
-                self
-            )),
+            _ => anyhow::bail!("Expected an option type, but got: {:?}", self),
         }
     }
 }
 
 pub fn kind_to_return_type(kind: &Kind) -> Result<QueryReturnType, anyhow::Error> {
-    match kind {
-        Kind::Any => Ok(QueryReturnType::Any),
-        Kind::Null => Ok(QueryReturnType::Null),
-        Kind::String => Ok(QueryReturnType::String),
-        Kind::Int => Ok(QueryReturnType::Int),
-        Kind::Float => Ok(QueryReturnType::Float),
-        Kind::Datetime => Ok(QueryReturnType::Datetime),
-        Kind::Duration => Ok(QueryReturnType::Duration),
-        Kind::Decimal => Ok(QueryReturnType::Decimal),
-        Kind::Bool => Ok(QueryReturnType::Bool),
-        Kind::Number => Ok(QueryReturnType::Number),
-        Kind::Record(tables) => Ok(QueryReturnType::Record(tables.clone())),
-        Kind::Option(kind) => Ok(QueryReturnType::Option(Box::new(kind_to_return_type(
-            kind,
-        )?))),
-        Kind::Uuid => Ok(QueryReturnType::Uuid),
-        Kind::Array(kind, _) => Ok(QueryReturnType::Array(Box::new(kind_to_return_type(kind)?))),
-        Kind::Object => Ok(QueryReturnType::Any),
-        Kind::Point => Err(anyhow::anyhow!("Points are not yet supported")),
-        Kind::Bytes => Err(anyhow::anyhow!("Bytes is not yet supported")),
-        Kind::Geometry(_) => Err(anyhow::anyhow!("Geometry is not yet supported")),
-        Kind::Set(_, _) => Err(anyhow::anyhow!("Sets are not yet supported")),
-        Kind::Either(_) => Err(anyhow::anyhow!("Either is not yet supported")),
+    Ok(match kind {
+        Kind::Any => QueryReturnType::Any,
+        Kind::Null => QueryReturnType::Null,
+        Kind::String => QueryReturnType::String,
+        Kind::Int => QueryReturnType::Int,
+        Kind::Float => QueryReturnType::Float,
+        Kind::Datetime => QueryReturnType::Datetime,
+        Kind::Duration => QueryReturnType::Duration,
+        Kind::Decimal => QueryReturnType::Decimal,
+        Kind::Bool => QueryReturnType::Bool,
+        Kind::Number => QueryReturnType::Number,
+        Kind::Record(tables) => QueryReturnType::Record(tables.clone()),
+        Kind::Option(kind) => QueryReturnType::Option(Box::new(kind_to_return_type(kind)?)),
+        Kind::Uuid => QueryReturnType::Uuid,
+        Kind::Array(kind, _) => QueryReturnType::Array(Box::new(kind_to_return_type(kind)?)),
+        Kind::Object => QueryReturnType::Any,
+        Kind::Point => anyhow::bail!("Points are not yet supported"),
+        Kind::Bytes => anyhow::bail!("Bytes is not yet supported"),
+        Kind::Geometry(_) => anyhow::bail!("Geometry is not yet supported"),
+        Kind::Set(_, _) => anyhow::bail!("Sets are not yet supported"),
+        Kind::Either(_) => anyhow::bail!("Either is not yet supported"),
         #[allow(unreachable_patterns)]
-        _ => Err(anyhow::anyhow!("Unknown kind: {:?}", kind)),
-    }
+        _ => anyhow::bail!("Unknown kind: {:?}", kind),
+    })
 }
 
 fn path_to_type(parts: &[Part], final_type: QueryReturnType) -> QueryReturnType {
