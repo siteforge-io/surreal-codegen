@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use surrealdb::sql::{
-    Cast, Constant, Expression, Field, Fields, Ident, Idiom, Operator, Param, Part, Value,
+    Cast, Constant, Expression, Field, Fields, Ident, Idiom, Object, Operator, Param, Part, Value,
 };
 
 use crate::{kind_to_return_type, QueryReturnType};
@@ -9,6 +9,7 @@ use crate::{kind_to_return_type, QueryReturnType};
 use super::{
     function::get_function_return_type,
     get_subquery_return_type,
+    object::get_object_return_type,
     schema::QueryState,
     utils::{get_what_table, merge_into_map_recursively},
 };
@@ -31,10 +32,12 @@ where
         if used_tables.contains(&table.name) {
             continue;
         }
+
         used_tables.insert(table.name.clone());
 
+        state.push_stack_frame();
+
         let return_type = if let Some(fields) = fields {
-            state.push_stack_frame();
             let mut table_fields = table.fields.clone();
 
             get_field_and_variables(&mut table_fields, state);
@@ -43,6 +46,8 @@ where
         } else {
             QueryReturnType::Object(table.fields.clone())
         };
+
+        state.pop_stack_frame();
 
         return_types.push(return_type);
     }
@@ -148,7 +153,7 @@ pub fn get_value_return_type(
         Value::Function(func) => get_function_return_type(state, &func)?,
         Value::Expression(expr) => get_expression_return_type(expr, field_types, state)?,
         Value::Array(_) => anyhow::bail!("Arrays are not yet supported"),
-        Value::Object(_) => anyhow::bail!("Objects are not yet supported"),
+        Value::Object(obj) => get_object_return_type(state, obj)?,
         Value::Constant(constant) => match constant {
             Constant::MathE
             | Constant::MathFrac1Pi
@@ -272,6 +277,7 @@ pub fn get_field_from_paths(
             }
             None => anyhow::bail!("Unknown parameter: {}", param_name),
         },
+        Some(Part::All) => Ok(QueryReturnType::Object(field_types.clone())),
         Some(_) => anyhow::bail!("Unsupported path: {:#?}", parts),
         // We're returning an actual object
         None => Ok(QueryReturnType::Object(field_types.clone())),

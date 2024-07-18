@@ -100,6 +100,7 @@ fn path_to_type(parts: &[Part], final_type: QueryReturnType) -> QueryReturnType 
 }
 
 fn merge_fields(base: &mut HashMap<String, QueryReturnType>, new_type: QueryReturnType) {
+    // dbg!(&base, &new_type);
     if let QueryReturnType::Object(new_fields) = new_type {
         for (key, value) in new_fields {
             if let Some(existing) = base.get_mut(&key) {

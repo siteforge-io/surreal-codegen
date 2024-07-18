@@ -26,6 +26,9 @@ cargo install --path ./surreal-codegen
 - [x] `None`
 - [x] `Either` (mixed return types)
 
+## Objects
+- [x] `RETURN { foo: 1, bar: 2 }`
+
 ## Automatic Parameter Inference
 - [ ] `WHERE foo = $bar` parameter inference
 - [ ] Function call parameter inference
@@ -77,9 +80,10 @@ cargo install --path ./surreal-codegen
 
 
 ### Value expressions
-#### Idiom expressions
+#### Idiom/path expressions
 - [x] `foo.bar`
-- [x] `foo.*`
+- [x] `foo.*` for arrays
+- [x] `foo.*` for objects
 - [ ] `foo[0]`
 - [ ] edge traversal eg: `foo->bar<-baz`
 

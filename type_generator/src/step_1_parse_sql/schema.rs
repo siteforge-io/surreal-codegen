@@ -98,8 +98,15 @@ pub fn parse_schema(query: &str) -> Result<SchemaParsed, anyhow::Error> {
 
                 let field_type = path_to_type(&field.name.0, return_type);
 
+                println!(
+                    "table fields: {:?}, merging field_type: {:?}",
+                    table.fields, field_type
+                );
+
                 // Merge this field_type into the existing fields structure
                 merge_fields(&mut table.fields, field_type);
+
+                println!("table fields after merge: {:?}", table.fields);
             }
             Statement::Define(DefineStatement::Function(DefineFunctionStatement {
                 name,

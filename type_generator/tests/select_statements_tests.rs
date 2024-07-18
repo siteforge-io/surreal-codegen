@@ -464,3 +464,81 @@ DEFINE FIELD xyz ON user TYPE object;
 
     Ok(())
 }
+
+#[test]
+fn query_with_nested_object_all_field() -> anyhow::Result<()> {
+    let query = r#"
+SELECT
+    xyz.*
+FROM
+    user;
+"#;
+    let schema = r#"
+DEFINE TABLE user SCHEMAFULL;
+DEFINE FIELD xyz ON user TYPE record<xyz>;
+
+DEFINE TABLE xyz SCHEMAFULL;
+DEFINE FIELD abc ON xyz TYPE string;
+DEFINE FIELD num ON xyz TYPE int;
+"#;
+
+    let QueryResult { return_types, .. } =
+        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+    assert_eq_sorted!(
+        return_types,
+        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+            [(
+                "xyz".into(),
+                QueryReturnType::Object(
+                    [
+                        ("id".into(), QueryReturnType::Record(vec!["xyz".into()])),
+                        ("abc".into(), QueryReturnType::String.into()),
+                        ("num".into(), QueryReturnType::Int.into()),
+                    ]
+                    .into()
+                )
+            ),]
+            .into()
+        ))),]
+    );
+
+    Ok(())
+}
+
+#[test]
+fn query_with_nested_optional_object() -> anyhow::Result<()> {
+    let query = r#"
+SELECT
+    xyz.foo
+FROM
+    user;
+"#;
+    let schema = r#"
+DEFINE TABLE user SCHEMAFULL;
+DEFINE FIELD xyz ON user TYPE option<object>;
+DEFINE FIELD xyz.foo ON xyz TYPE option<string>;
+"#;
+
+    let QueryResult { return_types, .. } =
+        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+    assert_eq_sorted!(
+        return_types,
+        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+            [(
+                "xyz".into(),
+                QueryReturnType::Option(Box::new(QueryReturnType::Object(
+                    [(
+                        "foo".into(),
+                        QueryReturnType::Option(Box::new(QueryReturnType::String))
+                    )]
+                    .into()
+                )))
+            )]
+            .into()
+        )))]
+    );
+
+    Ok(())
+}

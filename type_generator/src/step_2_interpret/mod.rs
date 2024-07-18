@@ -1,4 +1,5 @@
 mod function;
+mod object;
 mod query;
 mod return_types;
 mod schema;
