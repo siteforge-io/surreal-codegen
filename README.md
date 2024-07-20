@@ -6,6 +6,10 @@ Building into binary CLI
 cargo install --path ./surreal-codegen
 ```
 
+```sh
+surreal-codegen --help
+```
+
 ### General Type Support and Handling
 - [x] `Never`
 - [x] `Unknown`
@@ -32,8 +36,9 @@ cargo install --path ./surreal-codegen
 ## Automatic Parameter Inference
 - [ ] `WHERE foo = $bar` parameter inference
 - [ ] Function call parameter inference
-- [ ] `SET foo = $bar` parameter inference
-- [ ] `CONTENT { foo: $bar }` parameter inference
+- [ ] `CREATE baz SET foo = $bar` parameter inference
+- [ ] `CREATE baz CONTENT { foo: $bar }` parameter inference
+- [ ] `CREATE baz CONTENT $foo` parameter inference
 
 ### `SELECT` statements
 - [x] All fields
@@ -70,6 +75,11 @@ cargo install --path ./surreal-codegen
 - [x] `RETURN AFTER`
 - [ ] `RETURN DIFF`
 - [x] `RETRUN @statement_param` with `$before` and `$after` field access
+- [ ] `CONTENT { foo: $bar }` parameter inference
+- [ ] `CONTENT $foo` parameter inference
+- [ ] `SET foo = $bar` parameter inference
+- [ ] `MERGE $bar` parameter inference
+- [ ] `MERGE { foo: $bar }` parameter inference
 
 
 ### `CREATE` statements
@@ -77,6 +87,12 @@ cargo install --path ./surreal-codegen
 - [x] `RETURN AFTER`
 - [ ] `RETURN DIFF`
 - [x] `RETRUN @statement_param` with `$after` field access
+- [ ] `CONTENT { foo: $bar }` parameter inference
+- [ ] `CONTENT $foo` parameter inference
+- [ ] `SET foo = $bar` parameter inference
+
+### `UPSERT` statements
+- [ ] TODO
 
 
 ### Value expressions
@@ -88,22 +104,22 @@ cargo install --path ./surreal-codegen
 - [ ] edge traversal eg: `foo->bar<-baz`
 
 #### Literal/constant expressions
-- [ ] `true`
-- [ ] `false`
-- [ ] `null`
-- [ ] `"string"`
-- [ ] `123`
-- [ ] `123.456`
+- [x] `true`
+- [x] `false`
+- [x] `null`
+- [x] `"string"`
+- [x] `123`
+- [x] `123.456`
 - [ ] `[1, 2, 3]`
-- [ ] `{"foo": "bar"}`
+- [x] `{"foo": "bar"}`
 
 #### Comparison expressions
-- [ ] `foo == "bar"`
-- [ ] `foo != "bar"`
-- [ ] `foo < "bar"`
-- [ ] `foo <= "bar"`
-- [ ] `foo > "bar"`
-- [ ] `foo >= "bar"`
+- [x] `foo == "bar"`
+- [x] `foo != "bar"`
+- [x] `foo < "bar"`
+- [x] `foo <= "bar"`
+- [x] `foo > "bar"`
+- [x] `foo >= "bar"`
 
 #### Subquery expressions
 - [x] `SELECT` statements
@@ -133,8 +149,9 @@ cargo install --path ./surreal-codegen
 - [ ] `FOR`
 - [ ] `CONTINUE`
 - [ ] `BREAK`
-- [ ] `RETURN`
+- [x] `RETURN`
 - [ ] `BEGIN`
 - [ ] `COMMIT`
+- [ ] `LET`
 - [ ] `ABORT`
 - [ ] `THROW`

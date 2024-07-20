@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use type_generator::{QueryResult, QueryReturnType};
+use type_generator::{QueryResult, ValueType};
 
 #[test]
 fn query_with_subquery() -> anyhow::Result<()> {
@@ -21,26 +21,26 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Object(
+        vec![ValueType::Option(Box::new(ValueType::Object(
             [
-                ("name".into(), QueryReturnType::String),
+                ("name".into(), ValueType::String),
                 (
                     "subquery".into(),
-                    QueryReturnType::Array(Box::new(QueryReturnType::Object(
-                        [("name".to_string(), QueryReturnType::String)].into()
+                    ValueType::Array(Box::new(ValueType::Object(
+                        [("name".to_string(), ValueType::String)].into()
                     )))
                 ),
                 (
                     "(DELETE user)".into(),
-                    QueryReturnType::Array(Box::new(QueryReturnType::Never))
+                    ValueType::Array(Box::new(ValueType::Never))
                 ),
                 (
                     "(UPDATE user SET name = \'John\' RETURN NONE)".into(),
-                    QueryReturnType::Array(Box::new(QueryReturnType::Never))
+                    ValueType::Array(Box::new(ValueType::Never))
                 ),
             ]
             .into()
-        ),]
+        )))]
     );
 
     Ok(())

@@ -2,41 +2,209 @@ use std::collections::HashMap;
 
 use surrealdb::sql::{
     parse,
-    statements::{DefineFunctionStatement, DefineStatement},
-    Block, Fields, Statement, Tables,
+    statements::{
+        DefineFieldStatement, DefineFunctionStatement, DefineStatement, DefineTableStatement,
+    },
+    Block, Fields, Idiom, Part, Statement, Tables,
 };
 
-use crate::{kind_to_return_type, merge_fields, path_to_type, QueryReturnType};
+use crate::{kind_to_return_type, ValueType};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct SchemaParsed {
     pub tables: HashMap<String, TableParsed>,
     pub functions: HashMap<String, FunctionParsed>,
     pub views: HashMap<String, ViewParsed>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct TableParsed {
-    pub name: String,
-    pub fields: HashMap<String, QueryReturnType>,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ViewParsed {
     pub name: String,
     pub expr: Fields,
     pub what: Tables,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionParsed {
     pub name: String,
-    pub arguments: Vec<(String, QueryReturnType)>,
+    pub arguments: Vec<(String, ValueType)>,
     pub block: Block,
 }
 
-pub fn parse_schema(query: &str) -> Result<SchemaParsed, anyhow::Error> {
-    let statements = parse(query)?.0;
+#[derive(Debug, PartialEq, Eq)]
+
+pub enum FieldType {
+    Simple,
+    NestedObject(HashMap<String, FieldParsed>),
+    NestedArray(Box<FieldParsed>),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct TableParsed {
+    pub name: String,
+    pub fields: HashMap<String, FieldParsed>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct FieldParsed {
+    pub name: String,
+    pub is_optional: bool,
+    pub return_type: ValueType,
+    pub has_default_or_value: bool,
+    pub flexible: bool,
+    pub readonly: bool,
+    pub field_type: FieldType,
+}
+
+impl FieldParsed {
+    pub fn compute_create_type(&self) -> ValueType {
+        match &self.field_type {
+            FieldType::Simple => match self.is_optional || self.has_default_or_value {
+                true => ValueType::Option(Box::new(self.return_type.clone())),
+                false => self.return_type.clone(),
+            },
+            FieldType::NestedObject(obj) => {
+                let mut fields = HashMap::new();
+                for (key, value) in obj {
+                    fields.insert(key.clone(), value.compute_create_type());
+                }
+
+                let fields = ValueType::Object(fields);
+
+                match self.is_optional || self.has_default_or_value {
+                    true => ValueType::Option(Box::new(fields)),
+                    false => fields,
+                }
+            }
+            _ => todo!(),
+        }
+    }
+
+    pub fn compute_select_type(&self) -> ValueType {
+        match &self.field_type {
+            FieldType::Simple => match self.is_optional {
+                true => ValueType::Option(Box::new(self.return_type.clone())),
+                false => self.return_type.clone(),
+            },
+            FieldType::NestedObject(obj) => {
+                let mut fields = HashMap::new();
+                for (key, value) in obj {
+                    fields.insert(key.clone(), value.compute_select_type());
+                }
+
+                let fields = ValueType::Object(fields);
+
+                match self.is_optional {
+                    true => ValueType::Option(Box::new(fields)),
+                    false => fields,
+                }
+            }
+            FieldType::NestedArray(inner_type) => {
+                let inner_type = inner_type.compute_select_type();
+                match self.is_optional {
+                    true => ValueType::Option(Box::new(ValueType::Array(Box::new(inner_type)))),
+                    false => ValueType::Array(Box::new(inner_type)),
+                }
+            }
+        }
+    }
+
+    pub fn compute_update_type(&self) -> ValueType {
+        todo!()
+        // return both flatten types
+        // ignore readonlys
+    }
+}
+
+impl TableParsed {
+    pub fn compute_create_fields(&self) -> HashMap<String, ValueType> {
+        let mut fields = HashMap::new();
+        for (key, value) in &self.fields {
+            fields.insert(key.clone(), value.compute_create_type());
+        }
+        fields
+    }
+
+    pub fn compute_select_fields(&self) -> HashMap<String, ValueType> {
+        let mut fields = HashMap::new();
+        for (key, value) in &self.fields {
+            fields.insert(key.clone(), value.compute_select_type());
+        }
+        fields
+    }
+
+    pub fn compute_update_fields(&self) -> HashMap<String, ValueType> {
+        let mut fields = HashMap::new();
+        for (key, value) in &self.fields {
+            fields.insert(key.clone(), value.compute_update_type());
+        }
+        fields
+    }
+}
+
+fn parse_table(
+    table: &DefineTableStatement,
+    field_definitions: &Vec<(Idiom, DefineFieldStatement)>,
+) -> anyhow::Result<TableParsed> {
+    let mut fields = HashMap::from([(
+        "id".into(),
+        FieldParsed {
+            name: "id".into(),
+            is_optional: false,
+            field_type: FieldType::Simple,
+            has_default_or_value: true,
+            readonly: true,
+            flexible: false,
+            return_type: ValueType::Record(vec![table.name.clone().into()]),
+        },
+    )]);
+
+    for (idiom, field) in field_definitions {
+        let return_type = match &field.kind {
+            Some(kind) => kind_to_return_type(kind)?,
+            None => anyhow::bail!("You must define a type for field `{}`", field.to_string()),
+        };
+
+        println!("idiom: {:#?}", idiom);
+
+        let to_insert = FieldParsed {
+            name: match &idiom[idiom.len() - 1] {
+                Part::Field(ident) => ident.to_string(),
+                _ => anyhow::bail!("Invalid path `{}`", idiom),
+            },
+            is_optional: return_type.is_optional(),
+            field_type: match &return_type {
+                ValueType::Any => FieldType::NestedObject(HashMap::new()),
+                ValueType::Option(box ValueType::Any) => FieldType::NestedObject(HashMap::new()),
+                _ => FieldType::Simple,
+            },
+            has_default_or_value: field.default.is_some() || field.value.is_some(), // TODO: check if uses variable expression internally
+            readonly: field.readonly,
+            flexible: field.flex,
+            return_type: match &return_type {
+                ValueType::Option(inner_type) => *inner_type.clone(),
+                _ => return_type,
+            },
+        };
+
+        println!("fields: {:#?}", to_insert);
+
+        insert_into_object(&idiom, &mut fields, to_insert)?;
+    }
+
+    return Ok(TableParsed {
+        name: table.name.to_string(),
+        fields,
+    });
+}
+
+pub fn parse_schema(schema: &str) -> Result<SchemaParsed, anyhow::Error> {
+    let statements = parse(schema)?.0;
+
+    struct TableInfo {
+        definition: DefineTableStatement,
+        fields: Vec<(Idiom, DefineFieldStatement)>,
+    }
 
     let mut tables = HashMap::new();
     let mut views = HashMap::new();
@@ -63,50 +231,26 @@ pub fn parse_schema(query: &str) -> Result<SchemaParsed, anyhow::Error> {
                     None => {
                         tables.insert(
                             name.clone(),
-                            TableParsed {
-                                name: name.clone(),
-                                fields: [
-                                    // insert the implicit id field
-                                    (
-                                        "id".into(),
-                                        QueryReturnType::Record(vec![name.clone().into()]),
-                                    ),
-                                ]
-                                .into(),
+                            TableInfo {
+                                definition: table.clone(),
+                                fields: Vec::new(),
                             },
                         );
                     }
                 }
             }
             Statement::Define(DefineStatement::Field(field)) => {
-                let table = tables
-                    .entry(field.what.to_string())
-                    .or_insert_with(TableParsed::default);
-
-                if views.get(&field.what.to_string()).is_some() {
-                    anyhow::bail!("Fields cannot be defined on views");
+                let table = match tables.get_mut(&field.what.to_string()) {
+                    Some(table) => table,
+                    None => {
+                        anyhow::bail!(
+                            "You tried to define a field on a table that hasn't been defined: `{}`",
+                            field.to_string()
+                        );
+                    }
                 };
 
-                let return_type = match &field.kind {
-                    Some(kind) => kind_to_return_type(kind)?,
-                    // could return QueryReturnType::Any here
-                    None => Err(anyhow::anyhow!(
-                        "You must define a type for field `{}`",
-                        field.to_string()
-                    ))?,
-                };
-
-                let field_type = path_to_type(&field.name.0, return_type);
-
-                println!(
-                    "table fields: {:?}, merging field_type: {:?}",
-                    table.fields, field_type
-                );
-
-                // Merge this field_type into the existing fields structure
-                merge_fields(&mut table.fields, field_type);
-
-                println!("table fields after merge: {:?}", table.fields);
+                table.fields.push((field.name.clone(), field));
             }
             Statement::Define(DefineStatement::Function(DefineFunctionStatement {
                 name,
@@ -123,7 +267,7 @@ pub fn parse_schema(query: &str) -> Result<SchemaParsed, anyhow::Error> {
                             .map(|(ident, kind)| {
                                 Ok((ident.to_string(), kind_to_return_type(kind)?))
                             })
-                            .collect::<Result<Vec<(String, QueryReturnType)>, anyhow::Error>>()?,
+                            .collect::<Result<Vec<(String, ValueType)>, anyhow::Error>>()?,
                         block: block.clone(),
                     },
                 );
@@ -133,81 +277,51 @@ pub fn parse_schema(query: &str) -> Result<SchemaParsed, anyhow::Error> {
         }
     }
 
+    let tables = {
+        let mut new_tables = HashMap::new();
+        for (name, table) in tables.iter_mut() {
+            new_tables.insert(name.clone(), parse_table(&table.definition, &table.fields)?);
+        }
+        new_tables
+    };
+
     return Ok(SchemaParsed {
         tables,
         functions,
         views,
     });
-    // let mut tables = HashMap::new();
-
-    // let field_definitions = get_field_definitions(query);
-    // let mut unresolved_views = VecDeque::new();
-
-    // for table_definition in get_table_definitions(query) {
-    //     match table_definition.view {
-    //         Some(_) => unresolved_views.push_back(table_definition),
-    //         None => {
-    //             tables.insert(
-    //                 table_definition.name.to_string(),
-    //                 get_normal_table(&table_definition, &field_definitions)?,
-    //             );
-    //         }
-    //     };
-    // }
-
-    // let mut iterations = 0;
-    // // this is sorta shitty and arbitrary
-    // let max_iterations = unresolved_views.len() * 3;
-
-    // // resolve views by looping through the queue of unresolved views until all views are resolved
-    // 'outer: while let Some(table_def) = unresolved_views.pop_front() {
-    //     iterations += 1;
-    //     if iterations > max_iterations {
-    //         return Err(anyhow::anyhow!(
-    //             "Circular view dependency detected, or table references non-existent table {}",
-    //             table_def.name
-    //         ));
-    //     }
-    //     let view = table_def.view.as_ref().unwrap();
-    //     // check if the tables this view depends on are defined, and if not, add it back to the queue
-    //     for table in &view.what.0 {
-    //         if !tables.contains_key(&table.0) {
-    //             unresolved_views.push_back(table_def.clone());
-    //             continue 'outer;
-    //         }
-    //     }
-
-    //     tables.insert(
-    //         table_def.name.to_string(),
-    //         get_view_table(table_def.name, &view, &schema)?,
-    //     );
-    // }
-
-    // Ok(tables)
 }
 
-// pub fn get_table_definitions(query: &Query) -> Vec<DefineTableStatement> {
-//     let mut tables = Vec::new();
-//     for stmt in query.iter() {
-//         match stmt {
-//             surrealdb::sql::Statement::Define(DefineStatement::Table(table)) => {
-//                 tables.push(table.clone());
-//             }
-//             _ => {}
-//         }
-//     }
-//     tables
-// }
+fn insert_into_object(
+    idiom: &[Part],
+    fields: &mut HashMap<String, FieldParsed>,
+    field: FieldParsed,
+) -> anyhow::Result<()> {
+    // if the idiom is empty, we're at the end of the path
+    if idiom.len() == 1 {
+        match &idiom[0] {
+            Part::Field(ident) => fields.insert(ident.to_string(), field),
+            _ => anyhow::bail!("Invalid path `{}`", Idiom::from(idiom)),
+        };
 
-// pub fn get_field_definitions(query: &Query) -> Vec<DefineFieldStatement> {
-//     let mut fields = Vec::new();
-//     for stmt in query.iter() {
-//         match stmt {
-//             surrealdb::sql::Statement::Define(DefineStatement::Field(field)) => {
-//                 fields.push(field.clone());
-//             }
-//             _ => {}
-//         }
-//     }
-//     fields
-// }
+        return Ok(());
+    }
+    let next_part = idiom.first().unwrap();
+    match next_part {
+        Part::Field(field_ident) => match fields.get_mut(field_ident.as_str()) {
+            Some(FieldParsed {
+                field_type: FieldType::NestedObject(fields),
+                ..
+            }) => insert_into_object(idiom[1..].as_ref(), fields, field),
+            _ => anyhow::bail!("Field `{}` is not a nested object", field_ident),
+        },
+        // Part::All(index) => match fields.get_mut(index) {
+        //     Some(FieldInfo {
+        //         field_type: FieldType::NestedArray(array_type),
+        //         ..
+        //     }) => insert_into_array_type(idiom[1..].as_ref(), array_type, field),
+        //     _ => anyhow::bail!("Index `{}` is not a nested array", index),
+        // },
+        _ => anyhow::bail!("Invalid path `{}`", Idiom::from(idiom)),
+    }
+}

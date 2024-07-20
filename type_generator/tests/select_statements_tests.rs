@@ -1,7 +1,7 @@
 use pretty_assertions_sorted::assert_eq_sorted;
 use std::collections::HashMap;
 use surrealdb::sql::Table;
-use type_generator::{QueryResult, QueryReturnType};
+use type_generator::{QueryResult, ValueType};
 
 #[test]
 fn query_specific_value() -> anyhow::Result<()> {
@@ -16,7 +16,10 @@ DEFINE FIELD name ON user TYPE string;
     let QueryResult { return_types, .. } =
         type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    assert_eq_sorted!(return_types, vec![QueryReturnType::String]);
+    assert_eq_sorted!(
+        return_types,
+        vec![ValueType::Option(Box::new(ValueType::String))]
+    );
 
     Ok(())
 }
@@ -53,16 +56,16 @@ DEFINE FIELD number ON user TYPE number;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        vec![ValueType::Array(Box::new(ValueType::Object(
             [
-                ("name".to_string(), QueryReturnType::String),
-                ("age".to_string(), QueryReturnType::Int),
-                ("bool".to_string(), QueryReturnType::Bool),
-                ("datetime".to_string(), QueryReturnType::Datetime),
-                ("duration".to_string(), QueryReturnType::Duration),
-                ("decimal".to_string(), QueryReturnType::Decimal),
-                ("uuid".to_string(), QueryReturnType::Uuid),
-                ("number".to_string(), QueryReturnType::Number),
+                ("name".to_string(), ValueType::String),
+                ("age".to_string(), ValueType::Int),
+                ("bool".to_string(), ValueType::Bool),
+                ("datetime".to_string(), ValueType::Datetime),
+                ("duration".to_string(), ValueType::Duration),
+                ("decimal".to_string(), ValueType::Decimal),
+                ("uuid".to_string(), ValueType::Uuid),
+                ("number".to_string(), ValueType::Number),
             ]
             .into()
         )))]
@@ -88,10 +91,9 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Object(HashMap::from([(
-            "name".to_string(),
-            QueryReturnType::String
-        )]))]
+        vec![ValueType::Option(Box::new(ValueType::Object(
+            HashMap::from([("name".to_string(), ValueType::String)])
+        )))]
     );
 
     Ok(())
@@ -119,14 +121,14 @@ DEFINE FIELD name ON user TYPE string;
         variables,
         HashMap::from([(
             "user".to_string(),
-            QueryReturnType::Record(vec![Table::from("user")])
+            ValueType::Record(vec![Table::from("user")])
         )])
     );
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-            [("name".to_string(), QueryReturnType::String)].into()
+        vec![ValueType::Array(Box::new(ValueType::Object(
+            [("name".to_string(), ValueType::String)].into()
         )))]
     );
 
@@ -156,20 +158,17 @@ DEFINE FIELD user ON xyz TYPE record<user>;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        vec![ValueType::Array(Box::new(ValueType::Object(
             [(
                 "xyz".into(),
-                QueryReturnType::Object(
+                ValueType::Object(
                     [
-                        ("abc".into(), QueryReturnType::String.into()),
+                        ("abc".into(), ValueType::String.into()),
                         (
                             "user".into(),
-                            QueryReturnType::Object(
-                                [(
-                                    "xyz".into(),
-                                    QueryReturnType::Record([Table::from("xyz")].into())
-                                ),]
-                                .into()
+                            ValueType::Object(
+                                [("xyz".into(), ValueType::Record([Table::from("xyz")].into())),]
+                                    .into()
                             )
                         ),
                     ]
@@ -200,9 +199,9 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Object(
-            [("foo".into(), QueryReturnType::String.into()),].into()
-        ),]
+        vec![ValueType::Option(Box::new(ValueType::Object(
+            [("foo".into(), ValueType::String.into()),].into()
+        )))]
     );
 
     Ok(())
@@ -228,9 +227,9 @@ DEFINE FIELD name ON org TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Object(
-            [("foo".into(), QueryReturnType::String.into()),].into()
-        ),]
+        vec![ValueType::Option(Box::new(ValueType::Object(
+            [("foo".into(), ValueType::String.into()),].into()
+        )))]
     );
 
     Ok(())
@@ -251,16 +250,13 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Object(
+        vec![ValueType::Option(Box::new(ValueType::Object(
             [
-                ("name".to_string(), QueryReturnType::String),
-                (
-                    "id".to_string(),
-                    QueryReturnType::Record(vec!["user".into()])
-                )
+                ("name".to_string(), ValueType::String),
+                ("id".to_string(), ValueType::Record(vec!["user".into()]))
             ]
             .into()
-        ),]
+        )))]
     );
 
     Ok(())
@@ -300,45 +296,43 @@ DEFINE FIELD abc2 ON xyz TYPE option<string>;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Object(
+        vec![ValueType::Option(Box::new(ValueType::Object(
             [
                 (
                     "name".into(),
-                    QueryReturnType::Option(Box::new(QueryReturnType::String.into())).into()
+                    ValueType::Option(Box::new(ValueType::String.into())).into()
                 ),
                 (
                     "num".into(),
-                    QueryReturnType::Option(Box::new(QueryReturnType::Int.into())).into()
+                    ValueType::Option(Box::new(ValueType::Int.into())).into()
                 ),
                 (
                     "bool".into(),
-                    QueryReturnType::Option(Box::new(QueryReturnType::Bool.into())).into()
+                    ValueType::Option(Box::new(ValueType::Bool.into())).into()
                 ),
                 (
                     "datetime".into(),
-                    QueryReturnType::Option(Box::new(QueryReturnType::Datetime.into())).into()
+                    ValueType::Option(Box::new(ValueType::Datetime.into())).into()
                 ),
                 (
                     "duration".into(),
-                    QueryReturnType::Option(Box::new(QueryReturnType::Duration.into())).into()
+                    ValueType::Option(Box::new(ValueType::Duration.into())).into()
                 ),
                 (
                     "decimal".into(),
-                    QueryReturnType::Option(Box::new(QueryReturnType::Decimal.into())).into()
+                    ValueType::Option(Box::new(ValueType::Decimal.into())).into()
                 ),
                 (
                     "xyz".into(),
-                    QueryReturnType::Option(Box::new(QueryReturnType::Object(
+                    ValueType::Option(Box::new(ValueType::Object(
                         [
                             (
                                 "abc".into(),
-                                QueryReturnType::Option(Box::new(QueryReturnType::String.into()))
-                                    .into()
+                                ValueType::Option(Box::new(ValueType::String.into())).into()
                             ),
                             (
                                 "abc2".into(),
-                                QueryReturnType::Option(Box::new(QueryReturnType::String.into()))
-                                    .into()
+                                ValueType::Option(Box::new(ValueType::String.into())).into()
                             ),
                         ]
                         .into()
@@ -347,7 +341,7 @@ DEFINE FIELD abc2 ON xyz TYPE option<string>;
                 ),
             ]
             .into()
-        ),]
+        )))]
     );
 
     Ok(())
@@ -371,10 +365,10 @@ DEFINE FIELD tags ON post TYPE array<string>;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        vec![ValueType::Array(Box::new(ValueType::Object(
             [(
                 "tags".into(),
-                QueryReturnType::Array(Box::new(QueryReturnType::String.into()))
+                ValueType::Array(Box::new(ValueType::String.into()))
             ),]
             .into()
         ))),]
@@ -401,10 +395,10 @@ DEFINE FIELD tags ON post TYPE array<string>;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        vec![ValueType::Array(Box::new(ValueType::Object(
             [(
                 "tags".into(),
-                QueryReturnType::Array(Box::new(QueryReturnType::String.into()))
+                ValueType::Array(Box::new(ValueType::String.into()))
             ),]
             .into()
         ))),]
@@ -431,8 +425,8 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-            [("name".to_string(), QueryReturnType::String)].into()
+        vec![ValueType::Array(Box::new(ValueType::Object(
+            [("name".to_string(), ValueType::String)].into()
         )))]
     );
 
@@ -457,8 +451,8 @@ DEFINE FIELD xyz ON user TYPE object;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-            [("xyz".into(), QueryReturnType::Any.into()),].into()
+        vec![ValueType::Array(Box::new(ValueType::Object(
+            [("xyz".into(), ValueType::Object([].into()).into()),].into()
         ))),]
     );
 
@@ -487,14 +481,14 @@ DEFINE FIELD num ON xyz TYPE int;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        vec![ValueType::Array(Box::new(ValueType::Object(
             [(
                 "xyz".into(),
-                QueryReturnType::Object(
+                ValueType::Object(
                     [
-                        ("id".into(), QueryReturnType::Record(vec!["xyz".into()])),
-                        ("abc".into(), QueryReturnType::String.into()),
-                        ("num".into(), QueryReturnType::Int.into()),
+                        ("id".into(), ValueType::Record(vec!["xyz".into()])),
+                        ("abc".into(), ValueType::String.into()),
+                        ("num".into(), ValueType::Int.into()),
                     ]
                     .into()
                 )
@@ -510,14 +504,17 @@ DEFINE FIELD num ON xyz TYPE int;
 fn query_with_nested_optional_object() -> anyhow::Result<()> {
     let query = r#"
 SELECT
-    xyz.foo
+    id,
+    xyz.foo,
+    xyz.abc
 FROM
     user;
 "#;
     let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD xyz ON user TYPE option<object>;
-DEFINE FIELD xyz.foo ON xyz TYPE option<string>;
+DEFINE FIELD xyz.foo ON user TYPE option<string>;
+DEFINE FIELD xyz.abc ON user TYPE option<string>;
 "#;
 
     let QueryResult { return_types, .. } =
@@ -525,20 +522,78 @@ DEFINE FIELD xyz.foo ON xyz TYPE option<string>;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-            [(
-                "xyz".into(),
-                QueryReturnType::Option(Box::new(QueryReturnType::Object(
-                    [(
-                        "foo".into(),
-                        QueryReturnType::Option(Box::new(QueryReturnType::String))
-                    )]
-                    .into()
-                )))
-            )]
+        vec![ValueType::Array(Box::new(ValueType::Object(
+            [
+                ("id".into(), ValueType::Record(vec!["user".into()])),
+                (
+                    "xyz".into(),
+                    ValueType::Option(Box::new(ValueType::Object(
+                        [
+                            ("foo".into(), ValueType::Option(Box::new(ValueType::String))),
+                            ("abc".into(), ValueType::Option(Box::new(ValueType::String))),
+                        ]
+                        .into()
+                    )))
+                )
+            ]
             .into()
         )))]
     );
 
     Ok(())
 }
+
+#[test]
+fn query_with_nested_optional_all_field() -> anyhow::Result<()> {
+    let query = r#"
+SELECT
+    id,
+    xyz.* as bazza
+FROM
+    user;
+"#;
+    let schema = r#"
+DEFINE TABLE user SCHEMAFULL;
+DEFINE FIELD xyz ON user TYPE option<object>;
+DEFINE FIELD xyz.foo ON user TYPE option<string>;
+DEFINE FIELD xyz.abc ON user TYPE option<string>;
+DEFINE FIELD xyz.num ON user TYPE int;
+"#;
+
+    let QueryResult { return_types, .. } =
+        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+    assert_eq_sorted!(
+        return_types,
+        vec![ValueType::Array(Box::new(ValueType::Object(
+            [
+                ("id".into(), ValueType::Record(vec!["user".into()])),
+                (
+                    "bazza".into(),
+                    ValueType::Option(Box::new(ValueType::Object(
+                        [
+                            ("foo".into(), ValueType::Option(Box::new(ValueType::String))),
+                            ("abc".into(), ValueType::Option(Box::new(ValueType::String))),
+                            ("num".into(), ValueType::Int),
+                        ]
+                        .into()
+                    )))
+                )
+            ]
+            .into()
+        )))]
+    );
+
+    Ok(())
+}
+
+// xyz : ValueType::Option(ValueType::Object(
+//     [
+//         ("foo".into(), ValueType::Option(ValueType::String)),
+//         (
+//             "abc".into(),
+//             ValueType::Option(ValueType::String)
+//         ),
+//     ]
+//     .into()
+// ))

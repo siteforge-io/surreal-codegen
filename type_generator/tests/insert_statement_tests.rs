@@ -1,6 +1,6 @@
 // use pretty_assertions_sorted::assert_eq_sorted;
 // use std::collections::HashMap;
-// use type_generator::QueryReturnType;
+// use type_generator::ValueType;
 
 // #[test]
 // fn insert_with_single_field() -> anyhow::Result<()> {
@@ -20,10 +20,10 @@
 //         codegen_info,
 //         CodegenInformation {
 //             parameters: HashMap::new(),
-//             return_types: vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+//             return_types: vec![ValueType::Array(Box::new(ValueType::Object(
 //                 [
-//                     ("id".into(), QueryReturnType::Record(vec!["user".into()])),
-//                     ("name".into(), QueryReturnType::String),
+//                     ("id".into(), ValueType::Record(vec!["user".into()])),
+//                     ("name".into(), ValueType::String),
 //                 ]
 //                 .into()
 //             )))]

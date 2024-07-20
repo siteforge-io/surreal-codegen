@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use type_generator::{QueryResult, QueryReturnType};
+use type_generator::{QueryResult, ValueType};
 
 #[test]
 fn select_group_by() -> anyhow::Result<()> {
@@ -23,10 +23,10 @@ DEFINE FIELD age ON user TYPE int;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        vec![ValueType::Array(Box::new(ValueType::Object(
             [
-                ("name".to_string(), QueryReturnType::String),
-                ("baz".to_string(), QueryReturnType::Number),
+                ("name".to_string(), ValueType::String),
+                ("baz".to_string(), ValueType::Number),
             ]
             .into()
         ))),]
@@ -56,10 +56,10 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        vec![ValueType::Array(Box::new(ValueType::Object(
             [
-                ("name".to_string(), QueryReturnType::String),
-                ("total".to_string(), QueryReturnType::Number),
+                ("name".to_string(), ValueType::String),
+                ("total".to_string(), ValueType::Number),
             ]
             .into()
         ))),]
@@ -87,8 +87,8 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-            [("total".to_string(), QueryReturnType::Number),].into()
+        vec![ValueType::Array(Box::new(ValueType::Object(
+            [("total".to_string(), ValueType::Number),].into()
         ))),]
     );
 

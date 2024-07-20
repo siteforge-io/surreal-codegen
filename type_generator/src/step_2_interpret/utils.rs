@@ -2,21 +2,21 @@ use std::collections::HashMap;
 
 use surrealdb::sql::{Ident, Param, Part, Thing, Value};
 
-use crate::QueryReturnType;
+use crate::ValueType;
 
-use super::schema::{InterpretedTable, QueryState};
+use super::schema::{QueryState, TableFields};
 
-pub fn get_what_table(
+pub fn get_what_fields(
     what_value: &Value,
     state: &mut QueryState,
-) -> Result<InterpretedTable, anyhow::Error> {
+) -> Result<TableFields, anyhow::Error> {
     let table_name = match what_value {
         Value::Table(table) => Ok(table.0.clone()),
         Value::Param(Param {
             0: Ident { 0: param_ident, .. },
             ..
         }) => {
-            if let Some(QueryReturnType::Record(tables)) = state.get(param_ident.as_str()) {
+            if let Some(ValueType::Record(tables)) = state.get(param_ident.as_str()) {
                 Ok(tables[0].0.clone())
             } else {
                 Err(anyhow::anyhow!("Unsupported parameter: {}", param_ident))
@@ -26,13 +26,13 @@ pub fn get_what_table(
         _ => Err(anyhow::anyhow!("Unsupported FROM value: {:#?}", what_value)),
     }?;
 
-    Ok(state.table(&table_name)?)
+    Ok(state.table_select_fields(&table_name)?)
 }
 
 pub fn merge_into_map_recursively(
-    map: &mut HashMap<String, QueryReturnType>,
+    map: &mut HashMap<String, ValueType>,
     parts: &[Part],
-    return_type: QueryReturnType,
+    return_type: ValueType,
 ) -> Result<(), anyhow::Error> {
     if parts.is_empty() {
         return Ok(());
@@ -46,11 +46,11 @@ pub fn merge_into_map_recursively(
                 // check if the return type is a double optional, because something like xyz.abc returns option<option<string>> if xyz and abc are both optional
                 if is_double_optional(&return_type) {
                     let next_map = map.entry(field_name.to_string()).or_insert_with(|| {
-                        QueryReturnType::Option(Box::new(QueryReturnType::Object(HashMap::new())))
+                        ValueType::Option(Box::new(ValueType::Object(HashMap::new())))
                     });
 
                     match next_map {
-                        QueryReturnType::Option(box QueryReturnType::Object(nested_fields)) => {
+                        ValueType::Option(box ValueType::Object(nested_fields)) => {
                             merge_into_map_recursively(
                                 nested_fields,
                                 &parts[1..],
@@ -62,10 +62,10 @@ pub fn merge_into_map_recursively(
                 } else {
                     let next_map = map
                         .entry(field_name.to_string())
-                        .or_insert_with(|| QueryReturnType::Object(HashMap::new()));
+                        .or_insert_with(|| ValueType::Object(HashMap::new()));
 
                     match next_map {
-                        QueryReturnType::Object(nested_fields) => {
+                        ValueType::Object(nested_fields) => {
                             merge_into_map_recursively(nested_fields, &parts[1..], return_type)?
                         }
                         _ => Err(anyhow::anyhow!("Unsupported return type: {:?}", next_map))?,
@@ -74,7 +74,7 @@ pub fn merge_into_map_recursively(
             }
         }
         Part::All => {
-            let array_type = QueryReturnType::Array(Box::new(return_type));
+            let array_type = ValueType::Array(Box::new(return_type));
             if let Some(Part::Field(ident)) = parts.get(1) {
                 map.insert(ident.to_string(), array_type);
             } else {
@@ -90,10 +90,10 @@ pub fn merge_into_map_recursively(
     Ok(())
 }
 
-pub fn is_double_optional(return_type: &QueryReturnType) -> bool {
+pub fn is_double_optional(return_type: &ValueType) -> bool {
     match return_type {
-        QueryReturnType::Option(return_type) => match **return_type {
-            QueryReturnType::Option(_) => true,
+        ValueType::Option(return_type) => match **return_type {
+            ValueType::Option(_) => true,
             _ => false,
         },
         _ => false,

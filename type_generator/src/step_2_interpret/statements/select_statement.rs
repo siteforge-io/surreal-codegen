@@ -1,6 +1,6 @@
 use crate::{
     step_2_interpret::{return_types::get_statement_fields, schema::QueryState},
-    QueryReturnType,
+    ValueType,
 };
 
 use surrealdb::sql::statements::SelectStatement;
@@ -8,11 +8,13 @@ use surrealdb::sql::statements::SelectStatement;
 pub fn get_select_statement_return_type(
     select: &SelectStatement,
     state: &mut QueryState,
-) -> Result<QueryReturnType, anyhow::Error> {
+) -> Result<ValueType, anyhow::Error> {
     if select.only {
-        Ok(get_select_fields(select, state)?)
+        Ok(ValueType::Option(Box::new(get_select_fields(
+            select, state,
+        )?)))
     } else {
-        Ok(QueryReturnType::Array(Box::new(get_select_fields(
+        Ok(ValueType::Array(Box::new(get_select_fields(
             select, state,
         )?)))
     }
@@ -21,8 +23,8 @@ pub fn get_select_statement_return_type(
 fn get_select_fields(
     select: &SelectStatement,
     state: &mut QueryState,
-) -> Result<QueryReturnType, anyhow::Error> {
+) -> Result<ValueType, anyhow::Error> {
     get_statement_fields(&select.what, state, Some(&select.expr), |fields, state| {
-        state.set_local("this", QueryReturnType::Object(fields.clone()));
+        state.set_local("this", ValueType::Object(fields.clone()));
     })
 }

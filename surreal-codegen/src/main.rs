@@ -37,7 +37,7 @@ fn main() -> anyhow::Result<()> {
 
     let schema = type_generator::step_3_codegen::read_file(&PathBuf::from(&cli.schema))?;
     let state = type_generator::step_2_interpret::interpret_schema(&schema, globals)?;
-    let state = Arc::new(Mutex::new(state));
+    let state = Arc::new(state);
 
     let mut types = Vec::new();
 

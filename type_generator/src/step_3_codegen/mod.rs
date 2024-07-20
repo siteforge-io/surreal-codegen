@@ -12,24 +12,21 @@ use surrealdb::sql::Statement;
 
 use crate::{
     step_2_interpret::{interpret_query, QueryState, SchemaState},
-    QueryReturnType,
+    ValueType,
 };
 
 pub struct QueryResult {
     pub statements: Vec<Statement>,
-    pub variables: HashMap<String, QueryReturnType>,
+    pub variables: HashMap<String, ValueType>,
     pub state: QueryState,
-    pub return_types: Vec<QueryReturnType>,
+    pub return_types: Vec<ValueType>,
 }
 
 pub fn query_to_return_type(query: &str, schema: &str) -> anyhow::Result<QueryResult> {
     query_to_return_type_with_globals(query, schema, &HashMap::new())
 }
 
-pub fn output_query_type(
-    query: &str,
-    schema: Arc<Mutex<SchemaState>>,
-) -> anyhow::Result<QueryResult> {
+pub fn output_query_type(query: &str, schema: Arc<SchemaState>) -> anyhow::Result<QueryResult> {
     let parsed_query = crate::step_1_parse_sql::parse_query(query)?;
     let mut query_state = QueryState::new(schema, parsed_query.casted_parameters);
 
@@ -44,10 +41,11 @@ pub fn output_query_type(
 pub fn query_to_return_type_with_globals(
     query: &str,
     schema: &str,
-    globals: &HashMap<String, QueryReturnType>,
+    globals: &HashMap<String, ValueType>,
 ) -> anyhow::Result<QueryResult> {
     let state = crate::step_2_interpret::interpret_schema(schema, globals.clone())?;
-    output_query_type(query, Arc::new(Mutex::new(state)))
+
+    output_query_type(query, Arc::new(state))
 }
 
 pub fn read_surql_files(dir_path: &str) -> io::Result<HashMap<String, String>> {

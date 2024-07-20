@@ -22,19 +22,19 @@ RETURN {
 
     assert_eq_sorted!(
         return_types,
-        vec![type_generator::QueryReturnType::Object(
+        vec![type_generator::ValueType::Object(
             [
                 (
                     "foo".to_string(),
-                    type_generator::QueryReturnType::Object(
+                    type_generator::ValueType::Object(
                         [
-                            ("bar".to_string(), type_generator::QueryReturnType::Number),
-                            ("baz".to_string(), type_generator::QueryReturnType::Number),
+                            ("bar".to_string(), type_generator::ValueType::Number),
+                            ("baz".to_string(), type_generator::ValueType::Number),
                         ]
                         .into()
                     ),
                 ),
-                ("qux".to_string(), type_generator::QueryReturnType::Number),
+                ("qux".to_string(), type_generator::ValueType::Number),
             ]
             .into()
         )]

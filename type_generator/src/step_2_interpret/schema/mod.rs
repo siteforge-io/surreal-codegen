@@ -7,7 +7,7 @@ use surrealdb::sql::{Block, Entry, Values};
 
 use crate::{
     step_1_parse_sql::{parse_schema, FunctionParsed, SchemaParsed, ViewParsed},
-    QueryReturnType,
+    ValueType,
 };
 
 use super::{
@@ -16,26 +16,22 @@ use super::{
     get_select_statement_return_type, get_statement_fields, get_update_statement_return_type,
 };
 
+#[derive(Debug)]
 pub struct SchemaState {
-    global_variables: HashMap<String, QueryReturnType>,
-    tables: HashMap<String, InterpretedTable>,
-    functions: HashMap<String, InterpretedFunction>,
-    uninterpreted_views: HashMap<String, ViewParsed>,
-    uninterpreted_functions: HashMap<String, FunctionParsed>,
+    global_variables: HashMap<String, ValueType>,
+    pub schema: SchemaParsed,
 }
 
+#[derive(Debug)]
 pub struct QueryState {
-    schema: Arc<Mutex<SchemaState>>,
-    defined_variables: HashMap<String, QueryReturnType>,
-    inferred_variables: HashMap<String, QueryReturnType>,
-    stack_variables: Vec<HashMap<String, QueryReturnType>>,
+    pub schema: Arc<SchemaState>,
+    defined_variables: HashMap<String, ValueType>,
+    inferred_variables: HashMap<String, ValueType>,
+    stack_variables: Vec<HashMap<String, ValueType>>,
 }
 
 impl QueryState {
-    pub fn new(
-        schema: Arc<Mutex<SchemaState>>,
-        defined_variables: HashMap<String, QueryReturnType>,
-    ) -> Self {
+    pub fn new(schema: Arc<SchemaState>, defined_variables: HashMap<String, ValueType>) -> Self {
         Self {
             schema,
             defined_variables,
@@ -44,8 +40,13 @@ impl QueryState {
         }
     }
 
-    pub fn get(&self, key: &str) -> Option<QueryReturnType> {
-        while let Some(frame) = self.stack_variables.iter().rev().next() {
+    pub fn infer(&mut self, key: &str, value: ValueType) {
+        self.inferred_variables.insert(key.to_string(), value);
+    }
+
+    pub fn get(&self, key: &str) -> Option<ValueType> {
+        let mut stack_variables = self.stack_variables.iter().rev();
+        while let Some(frame) = stack_variables.next() {
             if let Some(value) = frame.get(key) {
                 return Some(value.clone());
             }
@@ -59,7 +60,7 @@ impl QueryState {
             return Some(value.clone());
         }
 
-        if let Some(value) = self.schema.lock().unwrap().global_variables.get(key) {
+        if let Some(value) = self.schema.global_variables.get(key) {
             return Some(value.clone());
         }
 
@@ -74,69 +75,31 @@ impl QueryState {
         self.stack_variables.pop();
     }
 
-    pub fn set_local(&mut self, key: &str, value: QueryReturnType) {
+    pub fn set_local(&mut self, key: &str, value: ValueType) {
         self.stack_variables
             .last_mut()
             .unwrap()
             .insert(key.to_string(), value);
     }
 
-    pub fn table_opt(&mut self, name: &str) -> Result<Option<InterpretedTable>, anyhow::Error> {
-        let state = self.schema.lock().unwrap();
-
-        match state.tables.get(name) {
-            Some(table) => Ok(Some(table.clone())),
-            None => match state.uninterpreted_views.get(name).cloned() {
-                None => Ok(None),
-                Some(view) => {
-                    drop(state);
-                    let new_table = get_view_table(&view, self)?;
-                    self.schema
-                        .lock()
-                        .unwrap()
-                        .tables
-                        .insert(name.to_string(), new_table.clone());
-                    Ok(Some(new_table))
-                }
-            },
-        }
-    }
-
-    pub fn table(&mut self, name: &str) -> Result<InterpretedTable, anyhow::Error> {
-        self.table_opt(name)?
-            .ok_or_else(|| anyhow::anyhow!("Unknown table: {}", name))
-    }
-
-    pub fn function_opt(
-        &mut self,
-        name: &str,
-    ) -> Result<Option<InterpretedFunction>, anyhow::Error> {
-        let state = self.schema.lock().unwrap();
-
-        match state.functions.get(name) {
-            Some(func) => Ok(Some(func.clone())),
-            None => match state.uninterpreted_functions.get(name).cloned() {
-                None => Ok(None),
-                Some(func) => {
-                    drop(state);
-                    let new_func = interpret_function_parsed(func, self)?;
-                    self.schema
-                        .lock()
-                        .unwrap()
-                        .functions
-                        .insert(name.to_string(), new_func.clone());
-                    Ok(Some(new_func))
-                }
+    pub fn table_select_fields(&mut self, name: &str) -> Result<TableFields, anyhow::Error> {
+        match self.schema.schema.tables.get(name) {
+            Some(table) => Ok(table.compute_select_fields()),
+            None => match self.schema.schema.views.get(name).cloned() {
+                Some(view) => Ok(get_view_table(&view, self)?),
+                None => anyhow::bail!("Unknown table: {}", name),
             },
         }
     }
 
     pub fn function(&mut self, name: &str) -> Result<InterpretedFunction, anyhow::Error> {
-        self.function_opt(name)?
-            .ok_or_else(|| anyhow::anyhow!("Unknown function: {}", name))
+        match self.schema.schema.functions.get(name).cloned() {
+            Some(func) => Ok(interpret_function_parsed(func, self)?),
+            None => anyhow::bail!("Unknown function: {}", name),
+        }
     }
 
-    pub fn extract_required_variables(&self) -> HashMap<String, QueryReturnType> {
+    pub fn extract_required_variables(&self) -> HashMap<String, ValueType> {
         let mut variables = HashMap::new();
 
         for (name, value) in self.defined_variables.iter() {
@@ -156,99 +119,21 @@ impl QueryState {
 #[derive(Debug, Clone)]
 pub struct InterpretedFunction {
     pub name: String,
-    pub args: Vec<(String, QueryReturnType)>,
-    pub return_type: QueryReturnType,
+    pub args: Vec<(String, ValueType)>,
+    pub return_type: ValueType,
 }
 
-#[derive(Debug, Clone)]
-pub struct InterpretedTable {
-    pub name: String,
-    pub fields: HashMap<String, QueryReturnType>,
-}
+pub type TableFields = HashMap<String, ValueType>;
 
 pub fn interpret_schema(
     schema: &str,
-    global_variables: HashMap<String, QueryReturnType>,
+    global_variables: HashMap<String, ValueType>,
 ) -> Result<SchemaState, anyhow::Error> {
-    let SchemaParsed {
-        functions,
-        views,
-        tables,
-    } = parse_schema(schema)?;
-
-    let mut state = SchemaState {
+    Ok(SchemaState {
         global_variables,
-        tables: HashMap::new(),
-        functions: HashMap::new(),
-        uninterpreted_functions: functions,
-        uninterpreted_views: views,
-    };
-
-    for table in tables.into_values() {
-        state.tables.insert(
-            table.name.clone(),
-            InterpretedTable {
-                name: table.name,
-                fields: table.fields,
-            },
-        );
-    }
-
-    // make all functions return QueryReturnType::Never, and then set them after the views are done, and recalculae views again
-    // for func in functions.values() {
-    //     state.schema.functions.insert(
-    //         func.name.clone(),
-    //         InterpretedFunction {
-    //             name: func.name.clone(),
-    //             args: func.arguments.clone(),
-    //             return_type: QueryReturnType::Never,
-    //         },
-    //     );
-    // }
-
-    // let mut view_deque = VecDeque::new();
-
-    // for view in views.values() {
-    //     view_deque.push_back(view);
-    // }
-
-    // while let Some(view) = view_deque.pop_front() {
-    // state.view
-    // }
-    // for table in schema.tables.values() {
-    //     interpret_table_parsed(&mut schmea_interpreted, table)?;
-    // }
-
-    // for func in schema.functions.into_values() {
-    //     interpret_function_parsed(&mut schmea_interpreted, &func)?;
-    // }
-
-    Ok(state)
+        schema: parse_schema(schema)?,
+    })
 }
-
-// fn interpret_table_parsed(state: &mut QueryState, table: &str) -> Result<(), anyhow::Error> {
-//     match state.schema.tables.get(table) {
-//         Some(_) => Ok(()),
-//         None => match state.schema.parsed.tables.get(table) {
-//             Some(TableParsed {
-//                 view: Some(view), ..
-//             }) => {
-//                 unimplemented!()
-//             }
-//             Some(table) => {
-//                 state.schema.tables.insert(
-//                     table.name.clone(),
-//                     InterpretedTable {
-//                         name: table.name.clone(),
-//                         fields: table.fields.clone(),
-//                     },
-//                 );
-//                 Ok(())
-//             }
-//             None => anyhow::bail!("Unknown table: {}", table),
-//         },
-//     }
-// }
 
 fn interpret_function_parsed(
     func: FunctionParsed,
@@ -256,8 +141,8 @@ fn interpret_function_parsed(
 ) -> Result<InterpretedFunction, anyhow::Error> {
     operation_state.push_stack_frame();
 
-    for (name, return_type) in func.arguments.clone() {
-        operation_state.set_local(&name, return_type);
+    for (name, return_type) in func.arguments.iter() {
+        operation_state.set_local(&name, return_type.clone());
     }
 
     let func = InterpretedFunction {
@@ -271,10 +156,7 @@ fn interpret_function_parsed(
     Ok(func)
 }
 
-fn get_block_return_type(
-    block: Block,
-    state: &mut QueryState,
-) -> Result<QueryReturnType, anyhow::Error> {
+fn get_block_return_type(block: Block, state: &mut QueryState) -> Result<ValueType, anyhow::Error> {
     for entry in block.0.into_iter() {
         match entry {
             Entry::Output(output) => return get_return_statement_return_type(&output, state),
@@ -288,32 +170,29 @@ fn get_block_return_type(
         }
     }
 
-    Ok(QueryReturnType::Null)
+    Ok(ValueType::Null)
 }
 
 fn get_view_table(
     // name: &str,
     view: &ViewParsed,
     state: &mut QueryState,
-) -> Result<InterpretedTable, anyhow::Error> {
+) -> Result<TableFields, anyhow::Error> {
     match get_view_return_type(view, state)? {
-        QueryReturnType::Object(mut fields) => {
-            // add the implicit id field
+        ValueType::Object(mut fields) => {
             if view.what.0.len() != 1 {
                 return Err(anyhow::anyhow!("Expected single table in view"));
             }
 
+            // add the implicit id field
             fields.insert(
                 "id".into(),
-                QueryReturnType::Record(vec![view.name.clone().into()]),
+                ValueType::Record(vec![view.name.clone().into()]),
             );
 
-            Ok(InterpretedTable {
-                name: view.name.to_string(),
-                fields,
-            })
+            Ok(fields)
         }
-        QueryReturnType::Either(..) => Err(anyhow::anyhow!(
+        ValueType::Either(..) => Err(anyhow::anyhow!(
             "Multiple tables in view are not currently supported"
         )),
         _ => Err(anyhow::anyhow!("Expected object return type"))?,
@@ -323,7 +202,7 @@ fn get_view_table(
 pub fn get_view_return_type(
     view: &ViewParsed,
     state: &mut QueryState,
-) -> Result<QueryReturnType, anyhow::Error> {
+) -> Result<ValueType, anyhow::Error> {
     get_statement_fields(
         &Into::<Values>::into(&view.what),
         state,

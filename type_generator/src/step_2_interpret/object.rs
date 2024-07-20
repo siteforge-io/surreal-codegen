@@ -2,14 +2,14 @@ use std::collections::HashMap;
 
 use surrealdb::sql::Object;
 
-use crate::QueryReturnType;
+use crate::ValueType;
 
 use super::{return_types::get_value_return_type, QueryState};
 
 pub fn get_object_return_type(
     state: &mut QueryState,
     obj: &Object,
-) -> Result<QueryReturnType, anyhow::Error> {
+) -> Result<ValueType, anyhow::Error> {
     let mut fields = HashMap::new();
 
     for (key, value) in obj.0.iter() {
@@ -18,5 +18,5 @@ pub fn get_object_return_type(
         fields.insert(key.clone(), return_type);
     }
 
-    return Ok(QueryReturnType::Object(fields));
+    return Ok(ValueType::Object(fields));
 }

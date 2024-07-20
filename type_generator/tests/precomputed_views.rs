@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use type_generator::{QueryResult, QueryReturnType};
+use type_generator::{QueryResult, ValueType};
 
 #[test]
 fn precomputed_views() -> anyhow::Result<()> {
@@ -19,13 +19,13 @@ FROM foo;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        vec![ValueType::Array(Box::new(ValueType::Object(
             [
                 (
                     "id".to_string(),
-                    QueryReturnType::Record(vec!["baz".into()])
+                    ValueType::Record(vec!["baz".into()])
                 ),
-                ("num".to_string(), QueryReturnType::Number),
+                ("num".to_string(), ValueType::Number),
             ]
             .into()
         )))]
@@ -58,22 +58,22 @@ SELECT * FROM baz;
     assert_eq_sorted!(
         return_types,
         vec![
-            QueryReturnType::Array(Box::new(QueryReturnType::Object(
+            ValueType::Array(Box::new(ValueType::Object(
                 [
-                    ("num".to_string(), QueryReturnType::Number),
-                    ("five".to_string(), QueryReturnType::Number),
+                    ("num".to_string(), ValueType::Number),
+                    ("five".to_string(), ValueType::Number),
                 ]
                 .into()
             ))),
-            QueryReturnType::Array(Box::new(QueryReturnType::Object(
+            ValueType::Array(Box::new(ValueType::Object(
                 [
                     (
                         "id".to_string(),
-                        QueryReturnType::Record(vec!["baz".into()])
+                        ValueType::Record(vec!["baz".into()])
                     ),
-                    ("num".to_string(), QueryReturnType::Number),
-                    ("five".to_string(), QueryReturnType::Number),
-                    ("beep".to_string(), QueryReturnType::Number),
+                    ("num".to_string(), ValueType::Number),
+                    ("five".to_string(), ValueType::Number),
+                    ("beep".to_string(), ValueType::Number),
                 ]
                 .into()
             ))),

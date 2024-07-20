@@ -1,6 +1,6 @@
 use pretty_assertions_sorted::assert_eq_sorted;
 use std::collections::HashMap;
-use type_generator::{step_3_codegen::QueryResult, QueryReturnType};
+use type_generator::{step_3_codegen::QueryResult, ValueType};
 
 #[test]
 fn constant_string() -> anyhow::Result<()> {
@@ -23,14 +23,16 @@ DEFINE TABLE foo SCHEMAFULL;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Object(HashMap::from([
-            ("foo".to_string(), QueryReturnType::String),
-            ("123".to_string(), QueryReturnType::Number),
-            ("true".to_string(), QueryReturnType::Bool),
-            ("false".to_string(), QueryReturnType::Bool),
-            ("NONE".to_string(), QueryReturnType::Null),
-            ("NULL".to_string(), QueryReturnType::Null),
-        ]))]
+        vec![ValueType::Option(Box::new(ValueType::Object(
+            HashMap::from([
+                ("foo".to_string(), ValueType::String),
+                ("123".to_string(), ValueType::Number),
+                ("true".to_string(), ValueType::Bool),
+                ("false".to_string(), ValueType::Bool),
+                ("NONE".to_string(), ValueType::Null),
+                ("NULL".to_string(), ValueType::Null),
+            ])
+        )))]
     );
     Ok(())
 }

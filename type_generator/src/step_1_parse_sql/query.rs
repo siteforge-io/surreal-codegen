@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use surrealdb::sql::{parse, Cast, Param, Statement, Value};
 
-use crate::{kind_to_return_type, QueryReturnType};
+use crate::{kind_to_return_type, ValueType};
 
 pub struct QueryParsed {
     pub statements: Vec<Statement>,
-    pub casted_parameters: HashMap<String, QueryReturnType>,
+    pub casted_parameters: HashMap<String, ValueType>,
 }
 
 pub fn parse_query(query: &str) -> Result<QueryParsed, anyhow::Error> {

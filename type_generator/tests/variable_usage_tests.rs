@@ -1,6 +1,6 @@
 use pretty_assertions_sorted::assert_eq_sorted;
 use std::collections::HashMap;
-use type_generator::{QueryResult, QueryReturnType};
+use type_generator::{QueryResult, ValueType};
 
 #[test]
 fn query_with_variable() -> anyhow::Result<()> {
@@ -23,12 +23,12 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        vec![ValueType::Array(Box::new(ValueType::Object(
             [(
                 "before".into(),
-                QueryReturnType::Object(HashMap::from([
-                    ("id".into(), QueryReturnType::Record(vec!["user".into()])),
-                    ("name".into(), QueryReturnType::String)
+                ValueType::Object(HashMap::from([
+                    ("id".into(), ValueType::Record(vec!["user".into()])),
+                    ("name".into(), ValueType::String)
                 ]))
             )]
             .into()
@@ -63,10 +63,10 @@ DEFINE FIELD baz ON abc TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        vec![ValueType::Array(Box::new(ValueType::Object(
             [
-                ("alias".into(), QueryReturnType::String),
-                ("baz".into(), QueryReturnType::String),
+                ("alias".into(), ValueType::String),
+                ("baz".into(), ValueType::String),
             ]
             .into()
         )))]
@@ -96,8 +96,8 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-            [("after".into(), QueryReturnType::Null)].into()
+        vec![ValueType::Array(Box::new(ValueType::Object(
+            [("after".into(), ValueType::Null)].into()
         )))]
     );
 
@@ -128,10 +128,10 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        vec![ValueType::Array(Box::new(ValueType::Object(
             [
-                ("name".into(), QueryReturnType::String),
-                ("alias".into(), QueryReturnType::String),
+                ("name".into(), ValueType::String),
+                ("alias".into(), ValueType::String),
             ]
             .into()
         )))]
@@ -164,10 +164,10 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        vec![ValueType::Array(Box::new(ValueType::Object(
             [
-                ("name".into(), QueryReturnType::String),
-                ("alias".into(), QueryReturnType::String),
+                ("name".into(), ValueType::String),
+                ("alias".into(), ValueType::String),
             ]
             .into()
         )))]

@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use type_generator::{QueryResult, QueryReturnType};
+use type_generator::{QueryResult, ValueType};
 
 #[test]
 fn query_with_simple_delete() -> anyhow::Result<()> {
@@ -15,7 +15,7 @@ DEFINE TABLE user SCHEMAFULL;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Never))]
+        vec![ValueType::Array(Box::new(ValueType::Never))]
     );
 
     Ok(())
@@ -33,7 +33,7 @@ DEFINE TABLE user SCHEMAFULL;
     let QueryResult { return_types, .. } =
         type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    assert_eq_sorted!(return_types, vec![QueryReturnType::Never]);
+    assert_eq_sorted!(return_types, vec![ValueType::Never]);
 
     Ok(())
 }
@@ -52,7 +52,7 @@ DEFINE TABLE user SCHEMAFULL;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Null))]
+        vec![ValueType::Array(Box::new(ValueType::Null))]
     );
 
     Ok(())
@@ -73,13 +73,13 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
+        vec![ValueType::Array(Box::new(ValueType::Object(
             [
                 (
                     "id".into(),
-                    QueryReturnType::Record(vec!["user".into()]).into()
+                    ValueType::Record(vec!["user".into()]).into()
                 ),
-                ("name".into(), QueryReturnType::String.into()),
+                ("name".into(), ValueType::String.into()),
             ]
             .into()
         ))),]
@@ -103,8 +103,8 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![QueryReturnType::Array(Box::new(QueryReturnType::Object(
-            [("name".to_string(), QueryReturnType::Null)].into()
+        vec![ValueType::Array(Box::new(ValueType::Object(
+            [("name".to_string(), ValueType::Null)].into()
         )))]
     );
 

@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use surrealdb::sql::{parse, Cast, Param, Value};
 
-use crate::{kind_to_return_type, QueryReturnType};
+use crate::{kind_to_return_type, ValueType};
 
-pub fn parse_value_casts(query: &str) -> Result<HashMap<String, QueryReturnType>, anyhow::Error> {
+pub fn parse_value_casts(query: &str) -> Result<HashMap<String, ValueType>, anyhow::Error> {
     let mut parameter_types = HashMap::new();
 
     for stmt in parse(query)?.into_iter() {

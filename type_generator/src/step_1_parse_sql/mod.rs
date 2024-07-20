@@ -8,15 +8,15 @@ pub use schema::*;
 
 // #[derive(Debug, Clone)]
 // pub struct ParseState {
-//     pub global: Arc<Mutex<HashMap<String, QueryReturnType>>>,
-//     pub inferred: Arc<Mutex<HashMap<String, QueryReturnType>>>,
-//     pub defined: Arc<Mutex<HashMap<String, QueryReturnType>>>,
-//     pub locals: HashMap<String, QueryReturnType>,
+//     pub global: Arc<Mutex<HashMap<String, ValueType>>>,
+//     pub inferred: Arc<Mutex<HashMap<String, ValueType>>>,
+//     pub defined: Arc<Mutex<HashMap<String, ValueType>>>,
+//     pub locals: HashMap<String, ValueType>,
 // }
 
 // impl ParseState {
 //     /// Look up a parameter, moving up in the scope chain until it is found
-//     pub fn get(&self, param_name: &str) -> Option<QueryReturnType> {
+//     pub fn get(&self, param_name: &str) -> Option<ValueType> {
 //         if let Some(return_type) = self.locals.get(param_name) {
 //             return Some(return_type.clone());
 //         } else if let Some(return_type) = self.defined.lock().unwrap().get(param_name) {
@@ -66,38 +66,38 @@ pub use schema::*;
 //         let expected_table = TableParsed {
 //             name: "user".into(),
 //             fields: [
-//                 ("id".into(), QueryReturnType::Record(vec!["user".into()])),
-//                 ("name".into(), QueryReturnType::String),
-//                 ("age".into(), QueryReturnType::Int),
-//                 ("bool".into(), QueryReturnType::Bool),
-//                 ("datetime".into(), QueryReturnType::Datetime),
-//                 ("duration".into(), QueryReturnType::Duration),
-//                 ("decimal".into(), QueryReturnType::Decimal),
+//                 ("id".into(), ValueType::Record(vec!["user".into()])),
+//                 ("name".into(), ValueType::String),
+//                 ("age".into(), ValueType::Int),
+//                 ("bool".into(), ValueType::Bool),
+//                 ("datetime".into(), ValueType::Datetime),
+//                 ("duration".into(), ValueType::Duration),
+//                 ("decimal".into(), ValueType::Decimal),
 //                 (
 //                     "xyz".into(),
-//                     QueryReturnType::Record(vec![Table::from("xyz")]),
+//                     ValueType::Record(vec![Table::from("xyz")]),
 //                 ),
 //                 (
 //                     "arr".into(),
-//                     QueryReturnType::Array(Box::new(QueryReturnType::String)),
+//                     ValueType::Array(Box::new(ValueType::String)),
 //                 ),
 //                 (
 //                     "nested_obj".into(),
-//                     QueryReturnType::Object(HashMap::from([
-//                         ("abc".into(), QueryReturnType::String),
-//                         ("xyz".into(), QueryReturnType::String),
+//                     ValueType::Object(HashMap::from([
+//                         ("abc".into(), ValueType::String),
+//                         ("xyz".into(), ValueType::String),
 //                     ])),
 //                 ),
 //                 (
 //                     "nested_arr".into(),
-//                     QueryReturnType::Array(Box::new(QueryReturnType::Object(HashMap::from([
-//                         ("bar".into(), QueryReturnType::String),
-//                         ("foo".into(), QueryReturnType::String),
+//                     ValueType::Array(Box::new(ValueType::Object(HashMap::from([
+//                         ("bar".into(), ValueType::String),
+//                         ("foo".into(), ValueType::String),
 //                     ])))),
 //                 ),
 //                 (
 //                     "bar".into(),
-//                     QueryReturnType::Array(Box::new(QueryReturnType::String)),
+//                     ValueType::Array(Box::new(ValueType::String)),
 //                 ),
 //             ]
 //             .into(),
@@ -133,9 +133,9 @@ pub use schema::*;
 //                     TableParsed {
 //                         name: "user".into(),
 //                         fields: [
-//                             ("id".into(), QueryReturnType::Record(vec!["user".into()])),
-//                             ("name".into(), QueryReturnType::String),
-//                             ("age".into(), QueryReturnType::Int),
+//                             ("id".into(), ValueType::Record(vec!["user".into()])),
+//                             ("name".into(), ValueType::String),
+//                             ("age".into(), ValueType::Int),
 //                         ]
 //                         .into(),
 //                     }
@@ -147,14 +147,14 @@ pub use schema::*;
 //                         fields: [
 //                             (
 //                                 "foo_id".into(),
-//                                 QueryReturnType::Record(vec!["user".into()])
+//                                 ValueType::Record(vec!["user".into()])
 //                             ),
 //                             (
 //                                 "id".into(),
-//                                 QueryReturnType::Record(vec!["user_view".into()])
+//                                 ValueType::Record(vec!["user_view".into()])
 //                             ),
-//                             ("name".into(), QueryReturnType::String),
-//                             ("age".into(), QueryReturnType::Int),
+//                             ("name".into(), ValueType::String),
+//                             ("age".into(), ValueType::Int),
 //                         ]
 //                         .into(),
 //                     }

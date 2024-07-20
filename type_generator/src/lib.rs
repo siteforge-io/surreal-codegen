@@ -10,7 +10,7 @@ pub mod step_3_codegen;
 pub use step_3_codegen::QueryResult;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum QueryReturnType {
+pub enum ValueType {
     Any,
     Never,
     Unknown,
@@ -24,39 +24,46 @@ pub enum QueryReturnType {
     Duration,
     Decimal,
     Bool,
-    Object(HashMap<String, QueryReturnType>),
-    Array(Box<QueryReturnType>),
-    Either(Vec<QueryReturnType>),
+    Object(HashMap<String, ValueType>),
+    Array(Box<ValueType>),
+    Either(Vec<ValueType>),
     Record(Vec<Table>),
-    Option(Box<QueryReturnType>),
+    Option(Box<ValueType>),
 }
 
-impl QueryReturnType {
-    pub fn expect_option(self) -> Result<QueryReturnType, anyhow::Error> {
+impl ValueType {
+    pub fn expect_option(self) -> Result<ValueType, anyhow::Error> {
         match self {
-            QueryReturnType::Option(return_type) => Ok(*return_type),
+            ValueType::Option(return_type) => Ok(*return_type),
             _ => anyhow::bail!("Expected an option type, but got: {:?}", self),
+        }
+    }
+
+    pub fn is_optional(&self) -> bool {
+        match self {
+            ValueType::Option(_) => true,
+            _ => false,
         }
     }
 }
 
-pub fn kind_to_return_type(kind: &Kind) -> Result<QueryReturnType, anyhow::Error> {
+pub fn kind_to_return_type(kind: &Kind) -> Result<ValueType, anyhow::Error> {
     Ok(match kind {
-        Kind::Any => QueryReturnType::Any,
-        Kind::Null => QueryReturnType::Null,
-        Kind::String => QueryReturnType::String,
-        Kind::Int => QueryReturnType::Int,
-        Kind::Float => QueryReturnType::Float,
-        Kind::Datetime => QueryReturnType::Datetime,
-        Kind::Duration => QueryReturnType::Duration,
-        Kind::Decimal => QueryReturnType::Decimal,
-        Kind::Bool => QueryReturnType::Bool,
-        Kind::Number => QueryReturnType::Number,
-        Kind::Record(tables) => QueryReturnType::Record(tables.clone()),
-        Kind::Option(kind) => QueryReturnType::Option(Box::new(kind_to_return_type(kind)?)),
-        Kind::Uuid => QueryReturnType::Uuid,
-        Kind::Array(kind, _) => QueryReturnType::Array(Box::new(kind_to_return_type(kind)?)),
-        Kind::Object => QueryReturnType::Any,
+        Kind::Any => ValueType::Any,
+        Kind::Null => ValueType::Null,
+        Kind::String => ValueType::String,
+        Kind::Int => ValueType::Int,
+        Kind::Float => ValueType::Float,
+        Kind::Datetime => ValueType::Datetime,
+        Kind::Duration => ValueType::Duration,
+        Kind::Decimal => ValueType::Decimal,
+        Kind::Bool => ValueType::Bool,
+        Kind::Number => ValueType::Number,
+        Kind::Record(tables) => ValueType::Record(tables.clone()),
+        Kind::Option(kind) => ValueType::Option(Box::new(kind_to_return_type(kind)?)),
+        Kind::Uuid => ValueType::Uuid,
+        Kind::Array(kind, _) => ValueType::Array(Box::new(kind_to_return_type(kind)?)),
+        Kind::Object => ValueType::Any,
         Kind::Point => anyhow::bail!("Points are not yet supported"),
         Kind::Bytes => anyhow::bail!("Bytes is not yet supported"),
         Kind::Geometry(_) => anyhow::bail!("Geometry is not yet supported"),
@@ -67,7 +74,7 @@ pub fn kind_to_return_type(kind: &Kind) -> Result<QueryReturnType, anyhow::Error
     })
 }
 
-fn path_to_type(parts: &[Part], final_type: QueryReturnType) -> QueryReturnType {
+fn path_to_type(parts: &[Part], final_type: ValueType) -> ValueType {
     if parts.is_empty() {
         return final_type;
     }
@@ -76,32 +83,31 @@ fn path_to_type(parts: &[Part], final_type: QueryReturnType) -> QueryReturnType 
         Part::Field(ident) => {
             // If this is the last part, return it as an object with the final type
             if parts.len() == 1 {
-                QueryReturnType::Object(HashMap::from([(ident.to_string(), final_type)]))
+                ValueType::Object(HashMap::from([(ident.to_string(), final_type)]))
             } else {
                 // Otherwise, continue building the structure
                 let inner_type = path_to_type(&parts[1..], final_type);
-                QueryReturnType::Object(HashMap::from([(ident.to_string(), inner_type)]))
+                ValueType::Object(HashMap::from([(ident.to_string(), inner_type)]))
             }
         }
         Part::All => {
             // If we encounter '*', we need to create an array type
             if parts.len() == 1 {
                 // If '*' is the last part, return an array of the final type
-                QueryReturnType::Array(Box::new(final_type))
+                ValueType::Array(Box::new(final_type))
             } else {
                 // Otherwise, there are more parts to process after '*'
                 // So we continue and wrap the inner type in an array
                 let inner_type = path_to_type(&parts[1..], final_type);
-                QueryReturnType::Array(Box::new(inner_type))
+                ValueType::Array(Box::new(inner_type))
             }
         }
         _ => unreachable!("Unhandled part type in path."),
     }
 }
 
-fn merge_fields(base: &mut HashMap<String, QueryReturnType>, new_type: QueryReturnType) {
-    // dbg!(&base, &new_type);
-    if let QueryReturnType::Object(new_fields) = new_type {
+fn merge_fields(base: &mut HashMap<String, ValueType>, new_type: ValueType) {
+    if let ValueType::Object(new_fields) = new_type {
         for (key, value) in new_fields {
             if let Some(existing) = base.get_mut(&key) {
                 merge_fields_deep(existing, value);
@@ -114,9 +120,9 @@ fn merge_fields(base: &mut HashMap<String, QueryReturnType>, new_type: QueryRetu
     }
 }
 
-fn merge_fields_deep(existing: &mut QueryReturnType, new: QueryReturnType) {
+fn merge_fields_deep(existing: &mut ValueType, new: ValueType) {
     match (existing, new) {
-        (QueryReturnType::Object(ref mut existing_fields), QueryReturnType::Object(new_fields)) => {
+        (ValueType::Object(ref mut existing_fields), ValueType::Object(new_fields)) => {
             for (key, value) in new_fields {
                 if let Some(sub_existing) = existing_fields.get_mut(&key) {
                     merge_fields_deep(sub_existing, value);
@@ -125,14 +131,40 @@ fn merge_fields_deep(existing: &mut QueryReturnType, new: QueryReturnType) {
                 }
             }
         }
-        (
-            QueryReturnType::Array(ref mut existing_element_type),
-            QueryReturnType::Array(new_element_type),
-        ) => {
+        (ValueType::Array(ref mut existing_element_type), ValueType::Array(new_element_type)) => {
             merge_fields_deep(existing_element_type, *new_element_type);
         }
-        (old, new) => {
-            *old = new;
+        // DEFINE FIELD xyz ON user TYPE option<object>;
+        // DEFINE FIELD xyz.foo ON user TYPE option<string>;
+        //
+        // FROM : Option(Any)
+        // THIS : Object(HashMap { foo: Option(String) })
+        // INTO : Option(Object(HashMap { foo: Option(String) }))
+        (existing @ ValueType::Option(box ValueType::Any), ValueType::Object(new_fields)) => {
+            *existing = ValueType::Option(Box::new(ValueType::Object(new_fields)));
+        }
+        // DEFINE FIELD xyz ON user TYPE option<object>;
+        // DEFINE FIELD xyz.foo ON user TYPE option<string>;
+        // DEFINE FIELD xyz.abc ON user TYPE option<string>;
+
+        // FROM : Option(Object(HashMap { foo: Option(String) }))
+        // THIS : Object(HashMap { abc: Option(String) }))
+        // INTO : Option(Object(HashMap { foo: Option(String), abc: Option(String) }))
+        (
+            ValueType::Option(box ValueType::Object(existing_fields)),
+            ValueType::Object(new_fields),
+        ) => {
+            for (key, value) in new_fields {
+                if let Some(sub_existing) = existing_fields.get_mut(&key) {
+                    merge_fields_deep(sub_existing, value);
+                } else {
+                    existing_fields.insert(key, value);
+                }
+            }
+        }
+
+        (existing, new) => {
+            *existing = new;
         }
     }
 }

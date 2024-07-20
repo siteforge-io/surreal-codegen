@@ -1,17 +1,14 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, sync::Arc};
 
 use surrealdb::sql::Statements;
 
-use crate::{step_2_interpret::SchemaState, QueryReturnType};
+use crate::{step_2_interpret::SchemaState, ValueType};
 
 pub struct TypeData {
     pub name: String,
     pub statements: Statements,
-    pub return_type: Vec<QueryReturnType>,
-    pub variables: HashMap<String, QueryReturnType>,
+    pub return_type: Vec<ValueType>,
+    pub variables: HashMap<String, ValueType>,
 }
 
 pub fn generate_typescript_output(types: &[TypeData]) -> Result<String, anyhow::Error> {
@@ -34,7 +31,7 @@ pub fn generate_typescript_output(types: &[TypeData]) -> Result<String, anyhow::
         output.push_str(&format!("export type {}Result = [{}]\n", name, {
             let mut output = String::new();
             for return_type in return_type {
-                output.push_str(&generate_type_definition(return_type)?);
+                output.push_str(&generate_type_definition(return_type, false)?);
                 output.push_str(",");
             }
             output
@@ -43,20 +40,10 @@ pub fn generate_typescript_output(types: &[TypeData]) -> Result<String, anyhow::
         if variables.len() > 0 {
             output.push_str(&format!("export type {}Variables = {{", name));
 
-            for (name, return_type) in variables {
-                match return_type {
-                    QueryReturnType::Option(return_type) => output.push_str(&format!(
-                        "    {}?: {},",
-                        name,
-                        generate_type_definition(return_type)?
-                    )),
-                    _ => output.push_str(&format!(
-                        "    {}: {},",
-                        name,
-                        generate_type_definition(return_type)?
-                    )),
-                };
-            }
+            output.push_str(&generate_type_definition(
+                &ValueType::Object(variables.clone()),
+                true,
+            )?);
 
             output.push_str("}\n");
         }
@@ -109,7 +96,7 @@ declare module "surrealdb.js" {
 pub fn generate_type_info(
     file_name: &str,
     query: &str,
-    state: Arc<Mutex<SchemaState>>,
+    state: Arc<SchemaState>,
 ) -> Result<TypeData, anyhow::Error> {
     let result = crate::step_3_codegen::output_query_type(query, state)?;
     let camel_case_file_name = filename_to_camel_case(file_name)?;
@@ -126,22 +113,25 @@ pub fn generate_type_info(
     })
 }
 
-fn generate_type_definition(return_type: &QueryReturnType) -> Result<String, anyhow::Error> {
+fn generate_type_definition(
+    return_type: &ValueType,
+    use_optional_keys: bool,
+) -> Result<String, anyhow::Error> {
     match return_type {
-        QueryReturnType::Any => Ok("any".to_string()),
-        QueryReturnType::Number => Ok("number".to_string()),
-        QueryReturnType::Never => Ok("never".to_string()),
-        QueryReturnType::Null => Ok("null".to_string()),
-        QueryReturnType::Unknown => Ok("unknown".to_string()),
-        QueryReturnType::String => Ok("string".to_string()),
-        QueryReturnType::Int => Ok("number".to_string()),
-        QueryReturnType::Float => Ok("number".to_string()),
-        QueryReturnType::Datetime => Ok("Date".to_string()),
-        QueryReturnType::Duration => Ok("Duration".to_string()),
-        QueryReturnType::Decimal => Ok("Decimal".to_string()),
-        QueryReturnType::Bool => Ok("boolean".to_string()),
-        QueryReturnType::Uuid => Ok("string".to_string()),
-        QueryReturnType::Object(map) => {
+        ValueType::Any => Ok("any".to_string()),
+        ValueType::Number => Ok("number".to_string()),
+        ValueType::Never => Ok("never".to_string()),
+        ValueType::Null => Ok("null".to_string()),
+        ValueType::Unknown => Ok("unknown".to_string()),
+        ValueType::String => Ok("string".to_string()),
+        ValueType::Int => Ok("number".to_string()),
+        ValueType::Float => Ok("number".to_string()),
+        ValueType::Datetime => Ok("Date".to_string()),
+        ValueType::Duration => Ok("Duration".to_string()),
+        ValueType::Decimal => Ok("Decimal".to_string()),
+        ValueType::Bool => Ok("boolean".to_string()),
+        ValueType::Uuid => Ok("string".to_string()),
+        ValueType::Object(map) => {
             let mut output = String::new();
             output.push_str("{");
 
@@ -150,29 +140,34 @@ fn generate_type_definition(return_type: &QueryReturnType) -> Result<String, any
             map.sort_by_key(|x| x.0.to_string());
 
             for (key, value) in map {
-                output.push_str(&format!("{}:{},", key, generate_type_definition(value)?));
+                output.push_str(&format!(
+                    "{}{}:{},",
+                    key,
+                    if use_optional_keys { "?" } else { "" },
+                    generate_type_definition(value, use_optional_keys)?
+                ));
             }
 
             output.push_str("}");
             Ok(output)
         }
-        QueryReturnType::Array(array) => {
-            let string = generate_type_definition(&**array)?;
+        ValueType::Array(array) => {
+            let string = generate_type_definition(&**array, use_optional_keys)?;
             Ok(format!("Array<{}>", string))
         }
-        QueryReturnType::Either(vec) => {
+        ValueType::Either(vec) => {
             let mut output = String::new();
             output.push_str("(");
 
             for return_type in vec.into_iter() {
                 output.push_str("|");
-                output.push_str(&generate_type_definition(return_type)?);
+                output.push_str(&generate_type_definition(return_type, use_optional_keys)?);
             }
 
             output.push_str(")");
             Ok(output)
         }
-        QueryReturnType::Record(tables) => {
+        ValueType::Record(tables) => {
             let mut output = String::new();
             output.push_str("RecordId<");
 
@@ -183,9 +178,9 @@ fn generate_type_definition(return_type: &QueryReturnType) -> Result<String, any
             output.push_str(">");
             Ok(output)
         }
-        QueryReturnType::Option(optional_value) => {
-            let string = generate_type_definition(&**optional_value)?;
-            Ok(format!("{}|undefined", string))
+        ValueType::Option(optional_value) => {
+            let string = generate_type_definition(&**optional_value, use_optional_keys)?;
+            Ok(format!("{}", string))
         }
     }
 }
