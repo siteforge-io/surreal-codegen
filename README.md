@@ -1,14 +1,44 @@
 # `surreal-codegen`
+> [!WARNING]
+> This is a work in progress, but we are currently using it in production at [Siteforge](https://siteforge.io)
 
-Building into binary CLI
+# Installation
+> [!NOTE]
+> Currently I haven't published this as a easily installable dependency, so you will need to `git clone` this repo and build it yourself.
 
+1. Clone this repo
+```sh
+git clone https://github.com/siteforge-io/surreal-codegen.git
 ```
+
+2. Build the binary
+```sh
 cargo install --path ./surreal-codegen
 ```
+
+3. Run the binary
 
 ```sh
 surreal-codegen --help
 ```
+
+```
+Usage: surreal-codegen [OPTIONS] --dir <DIR> --schema <SCHEMA>
+
+Options:
+  -d, --dir <DIR>        The directory containing the Surql files
+  -s, --schema <SCHEMA>
+  -o, --output <OUTPUT>  The name of the output file default of `types.ts` [default: ./types.ts]
+  -h, --help             Print help
+```
+
+# Usage
+
+```sh
+surreal-codegen --schema ./schema.surql --query ./query.surql
+```
+
+# Features Supported So Far
 
 ### General Type Support and Handling
 - [x] `Never`
@@ -35,10 +65,15 @@ surreal-codegen --help
 
 ## Automatic Parameter Inference
 - [ ] `WHERE foo = $bar` parameter inference
-- [ ] Function call parameter inference
+- [ ] `fn::foo($bar)` parameter inference
 - [ ] `CREATE baz SET foo = $bar` parameter inference
 - [ ] `CREATE baz CONTENT { foo: $bar }` parameter inference
-- [ ] `CREATE baz CONTENT $foo` parameter inference
+- [x] `CREATE baz CONTENT $foo` parameter inference
+- [ ] `UPDATE baz SET foo = $bar` parameter inference
+- [ ] `UPDATE baz CONTENT $foo` parameter inference
+- [ ] `UPDATE baz MERGE $foo` parameter inference
+- [ ] `UPDATE baz MERGE { foo: $bar }` parameter inference
+- [ ] `UPSERT baz SET foo = $bar` parameter inference
 
 ### `SELECT` statements
 - [x] All fields
