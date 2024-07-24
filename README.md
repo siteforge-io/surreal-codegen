@@ -89,6 +89,38 @@ const result = await db.typed(CreateUserQuery, {
 });
 ```
 
+## Typing parameters
+
+We exploit the SurrealDB casting system to infer the types of parameters, for places where they cannot be inferred from the query itself.
+
+All you must do is add a casting annotation with the parameter name, eg:
+
+```sql
+-- Casting syntax in SurrealDB.
+<string> $email;
+```
+
+This will allow the codegen to infer the type of `$email` variable as a `string`.
+
+### Example:
+
+`./queries/reset_password.surql`
+```sql
+<record<user>> $user;
+<string> $password;
+
+UPDATE ONLY $user
+  SET password = $password
+```
+
+### Global parameters
+You can also define global parameters in a `global.surql` file, which will be available to all queries in the directory, this is useful things like typing the $auth parameters available in SurrealDB across all queries.
+
+`./queries/globals.surql`
+```sql
+<record<user>> $user;
+```
+
 # Notes
 - We only currently support SCHEMAFULL tables so far, but we are working on supporting other table types.
 
@@ -226,12 +258,11 @@ const result = await db.typed(CreateUserQuery, {
   - [x] `$scope`
   - [x] `$input`
   - [x] `$token`
-- [-] built-in parameters
+- [ ] built-in parameters
   - [x] `$this`
   - [x] `$parent`
   - [x] `$after`
   - [x] `$before`
-  - [ ]
 - [ ] Automatic parameter inference in some cases
 
 ### Other Statements
