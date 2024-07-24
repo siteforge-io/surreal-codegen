@@ -190,3 +190,68 @@ DEFINE FIELD opt ON user TYPE option<string>;
 
     Ok(())
 }
+
+#[test]
+fn create_statement_with_value_and_default_clauses() -> anyhow::Result<()> {
+    let query = r#"
+CREATE user CONTENT $user"#;
+    let schema = r#"
+DEFINE TABLE user SCHEMAFULL;
+DEFINE FIELD name ON user TYPE string;
+DEFINE FIELD age ON user TYPE number DEFAULT 30;
+DEFINE FIELD email ON user TYPE string VALUE string::lowercase($value);
+DEFINE FIELD created_at ON user TYPE datetime VALUE time::now() READONLY;
+DEFINE FIELD updated_at ON user TYPE datetime VALUE time::now();
+"#;
+
+    let QueryResult {
+        return_types,
+        variables,
+        ..
+    } = type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+    let user_vars = ValueType::Object(
+        [
+            (
+                "id".to_string(),
+                ValueType::Option(Box::new(ValueType::Record(vec!["user".into()]))),
+            ),
+            ("name".to_string(), ValueType::String),
+            (
+                "age".to_string(),
+                ValueType::Option(Box::new(ValueType::Number)),
+            ),
+            ("email".to_string(), ValueType::String),
+        ]
+        .into(),
+    );
+
+    assert_eq_sorted!(
+        variables,
+        [(
+            "user".to_string(),
+            ValueType::Either(vec![
+                ValueType::Array(Box::new(user_vars.clone())),
+                user_vars.clone(),
+            ])
+        )]
+        .into()
+    );
+
+    assert_eq_sorted!(
+        return_types,
+        vec![ValueType::Array(Box::new(ValueType::Object(
+            [
+                ("id".into(), ValueType::Record(vec!["user".into()])),
+                ("name".into(), ValueType::String),
+                ("age".into(), ValueType::Number),
+                ("email".into(), ValueType::String),
+                ("created_at".into(), ValueType::Datetime),
+                ("updated_at".into(), ValueType::Datetime),
+            ]
+            .into()
+        )))]
+    );
+
+    Ok(())
+}

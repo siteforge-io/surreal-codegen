@@ -182,8 +182,8 @@ pub fn get_value_return_type(
 
 pub fn get_expression_return_type(
     expr: &Expression,
-    _field_types: &HashMap<String, ValueType>,
-    mut _state: &mut QueryState,
+    field_types: &HashMap<String, ValueType>,
+    mut state: &mut QueryState,
 ) -> Result<ValueType, anyhow::Error> {
     Ok(match expr {
         // Unary
@@ -238,6 +238,22 @@ pub fn get_expression_return_type(
         } => ValueType::Bool,
 
         // TODO: arithmetic
+        Expression::Binary {
+            l,
+            o: Operator::Add,
+            r,
+        } => {
+            let l = get_value_return_type(l, field_types, state)?;
+            let r = get_value_return_type(r, field_types, state)?;
+
+            match (&l, &r) {
+                (ValueType::Number, ValueType::Number) => ValueType::Number,
+                (ValueType::String, ValueType::String) => ValueType::String,
+                (ValueType::Datetime, ValueType::Datetime) => ValueType::Datetime,
+                (ValueType::Duration, ValueType::Duration) => ValueType::Duration,
+                _ => anyhow::bail!("Unsupported binary operation: {:?}", expr),
+            }
+        }
         // Expression
         // TODO: short circuiting
         // TODO: more (contains, any, etc, outside, inside, fuzzy match)
@@ -274,8 +290,13 @@ pub fn get_field_from_paths(
             }
             None => anyhow::bail!("Unknown parameter: {}", param_name),
         },
+        Some(Part::Start(Value::Subquery(subquery))) => {
+            let return_type = get_subquery_return_type(subquery, state)?;
+            match_return_type(&return_type, &parts[1..], field_types, state)
+        }
         Some(Part::All) => Ok(ValueType::Object(field_types.clone())),
-        Some(_) => anyhow::bail!("Unsupported path: {:#?}", parts),
+        Some(_) => anyhow::bail!("Unsupported path: {}", Idiom::from(parts)),
+        // Some(_) => anyhow::bail!("Unsupported path: {:#?}", parts),
         // We're returning an actual object
         None => Ok(ValueType::Object(field_types.clone())),
     }
@@ -324,12 +345,31 @@ pub fn match_return_type(
             field_types,
             state,
         )?))),
-        ValueType::Array(return_type) => Ok(ValueType::Array(Box::new(match_return_type(
-            return_type,
-            &parts,
-            field_types,
-            state,
-        )?))),
+        ValueType::Array(return_type) => match parts.first() {
+            Some(Part::Index(_)) => Ok(ValueType::Option(Box::new(match_return_type(
+                return_type,
+                &parts,
+                field_types,
+                state,
+            )?))),
+            Some(Part::All) => Ok(ValueType::Array(Box::new(match_return_type(
+                return_type,
+                &parts,
+                field_types,
+                state,
+            )?))),
+            Some(Part::Field(_)) => Ok(ValueType::Array(Box::new(match_return_type(
+                return_type,
+                &parts[1..],
+                field_types,
+                state,
+            )?))),
+            Some(_) => anyhow::bail!("Unsupported path: {}", Idiom::from(parts)),
+            None => anyhow::bail!(
+                "Tried to access array with no fields: {}",
+                Idiom::from(parts)
+            ),
+        },
         ValueType::Null => Ok(ValueType::Null),
         ValueType::Uuid => Ok(ValueType::Uuid),
         ValueType::Any => Ok(ValueType::Any),

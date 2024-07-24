@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use surrealdb::sql::{Ident, Param, Part, Thing, Value};
+use surrealdb::sql::{Ident, Idiom, Param, Part, Thing, Value};
 
 use crate::ValueType;
 
@@ -22,6 +22,9 @@ pub fn get_what_fields(
                 Err(anyhow::anyhow!("Unsupported parameter: {}", param_ident))
             }
         }
+        // Value::Idiom(Idiom { 0: parts }) => {
+        //     unimplemented!()
+        // }
         Value::Thing(Thing { tb, .. }) => Ok(tb.clone()),
         _ => Err(anyhow::anyhow!("Unsupported FROM value: {:#?}", what_value)),
     }?;

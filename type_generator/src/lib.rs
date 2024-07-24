@@ -67,7 +67,7 @@ pub fn kind_to_return_type(kind: &Kind) -> Result<ValueType, anyhow::Error> {
         Kind::Point => anyhow::bail!("Points are not yet supported"),
         Kind::Bytes => anyhow::bail!("Bytes is not yet supported"),
         Kind::Geometry(_) => anyhow::bail!("Geometry is not yet supported"),
-        Kind::Set(_, _) => anyhow::bail!("Sets are not yet supported"),
+        Kind::Set(kind, _) => ValueType::Array(Box::new(kind_to_return_type(kind)?)),
         Kind::Either(_) => anyhow::bail!("Either is not yet supported"),
         #[allow(unreachable_patterns)]
         _ => anyhow::bail!("Unknown kind: {:?}", kind),

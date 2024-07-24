@@ -31,21 +31,20 @@ pub fn generate_typescript_output(types: &[TypeData]) -> Result<String, anyhow::
         output.push_str(&format!("export type {}Result = [{}]\n", name, {
             let mut output = String::new();
             for return_type in return_type {
-                output.push_str(&generate_type_definition(return_type, false)?);
+                output.push_str(&generate_type_definition(return_type)?);
                 output.push_str(",");
             }
             output
         }));
 
         if variables.len() > 0 {
-            output.push_str(&format!("export type {}Variables = {{", name));
+            output.push_str(&format!("export type {}Variables = ", name));
 
-            output.push_str(&generate_type_definition(
-                &ValueType::Object(variables.clone()),
-                true,
-            )?);
+            output.push_str(&generate_type_definition(&ValueType::Object(
+                variables.clone(),
+            ))?);
 
-            output.push_str("}\n");
+            output.push_str("\n");
         }
     }
 
@@ -113,10 +112,7 @@ pub fn generate_type_info(
     })
 }
 
-fn generate_type_definition(
-    return_type: &ValueType,
-    use_optional_keys: bool,
-) -> Result<String, anyhow::Error> {
+fn generate_type_definition(return_type: &ValueType) -> Result<String, anyhow::Error> {
     match return_type {
         ValueType::Any => Ok("any".to_string()),
         ValueType::Number => Ok("number".to_string()),
@@ -143,8 +139,14 @@ fn generate_type_definition(
                 output.push_str(&format!(
                     "{}{}:{},",
                     key,
-                    if use_optional_keys { "?" } else { "" },
-                    generate_type_definition(value, use_optional_keys)?
+                    match value {
+                        ValueType::Option(_) => "?",
+                        _ => "",
+                    },
+                    match value {
+                        ValueType::Option(inner) => generate_type_definition(inner)?,
+                        value => generate_type_definition(value)?,
+                    },
                 ));
             }
 
@@ -152,7 +154,7 @@ fn generate_type_definition(
             Ok(output)
         }
         ValueType::Array(array) => {
-            let string = generate_type_definition(&**array, use_optional_keys)?;
+            let string = generate_type_definition(&**array)?;
             Ok(format!("Array<{}>", string))
         }
         ValueType::Either(vec) => {
@@ -161,7 +163,7 @@ fn generate_type_definition(
 
             for return_type in vec.into_iter() {
                 output.push_str("|");
-                output.push_str(&generate_type_definition(return_type, use_optional_keys)?);
+                output.push_str(&generate_type_definition(return_type)?);
             }
 
             output.push_str(")");
@@ -178,9 +180,10 @@ fn generate_type_definition(
             output.push_str(">");
             Ok(output)
         }
+        // ValueType::Option(..) => anyhow::bail!("Option types should never be generated"),
         ValueType::Option(optional_value) => {
-            let string = generate_type_definition(&**optional_value, use_optional_keys)?;
-            Ok(format!("{}", string))
+            let string = generate_type_definition(&**optional_value)?;
+            Ok(format!("{} | undefined", string))
         }
     }
 }

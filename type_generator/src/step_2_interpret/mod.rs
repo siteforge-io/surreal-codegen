@@ -38,6 +38,7 @@ fn get_statement_return_type(
         Statement::Insert(insert) => get_insert_statement_return_type(insert, state),
         Statement::Update(update) => get_update_statement_return_type(update, state),
         Statement::Output(output) => get_return_statement_return_type(output, state),
+        Statement::Value(value) => get_value_return_type(value, &HashMap::new(), state),
         _ => Err(anyhow::anyhow!("Unsupported statement type: `{}`", stmt)),
     }
 }

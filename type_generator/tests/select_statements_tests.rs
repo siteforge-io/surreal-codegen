@@ -587,13 +587,91 @@ DEFINE FIELD xyz.num ON user TYPE int;
     Ok(())
 }
 
-// xyz : ValueType::Option(ValueType::Object(
-//     [
-//         ("foo".into(), ValueType::Option(ValueType::String)),
-//         (
-//             "abc".into(),
-//             ValueType::Option(ValueType::String)
-//         ),
-//     ]
-//     .into()
-// ))
+#[test]
+fn query_select_result_with_index() -> anyhow::Result<()> {
+    let query = r#"
+(SELECT VALUE baz FROM user)[0];
+"#;
+    let schema = r#"
+DEFINE TABLE user SCHEMAFULL;
+DEFINE FIELD baz ON user TYPE string;
+"#;
+
+    let QueryResult { return_types, .. } =
+        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+    assert_eq_sorted!(
+        return_types,
+        vec![ValueType::Option(Box::new(ValueType::String))]
+    );
+
+    Ok(())
+}
+
+#[test]
+fn query_select_with_subquery_index() -> anyhow::Result<()> {
+    let query = r#"
+SELECT
+    foo,
+    (SELECT VALUE baz FROM user)[0] as bar
+FROM
+    user;
+"#;
+    let schema = r#"
+DEFINE TABLE user SCHEMAFULL;
+DEFINE FIELD baz ON user TYPE string;
+DEFINE FIELD foo ON user TYPE string;
+"#;
+
+    let QueryResult { return_types, .. } =
+        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+    assert_eq_sorted!(
+        return_types,
+        vec![ValueType::Array(Box::new(ValueType::Object(
+            [
+                ("foo".into(), ValueType::String),
+                ("bar".into(), ValueType::Option(Box::new(ValueType::String)))
+            ]
+            .into()
+        )))]
+    );
+
+    Ok(())
+}
+
+// #[test]
+// fn select_from_parent_field() -> anyhow::Result<()> {
+//     let query = r#"
+// SELECT
+//     name,
+//     (SELECT name FROM ONLY $parent.best_friend) as best_friend
+// FROM ONLY user;
+// "#;
+//     let schema = r#"
+// DEFINE TABLE user SCHEMAFULL;
+// DEFINE FIELD name ON user TYPE string;
+// DEFINE FIELD best_friend ON user TYPE record<user>;
+// "#;
+
+//     let QueryResult { return_types, .. } =
+//         type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+//     assert_eq_sorted!(
+//         return_types,
+//         vec![ValueType::Array(Box::new(ValueType::Object(
+//             [
+//                 ("name".into(), ValueType::String),
+//                 (
+//                     "best_friend".into(),
+//                     ValueType::Option(Box::new(ValueType::Object(
+//                         [("name".into(), ValueType::String)].into()
+//                     )))
+//                 )
+//             ]
+//             .into()
+//         )))]
+//     );
+
+//     Ok(())
+// }
