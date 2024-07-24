@@ -1,6 +1,6 @@
 # `surreal-codegen`
 > [!WARNING]
-> This is a work in progress, but we are currently using it in production at [Siteforge](https://siteforge.io)
+> This is a work in progress, but we are currently using it in production at [Siteforge](https://siteforge.io) to help ensure type safety in our SurrealDB queries.
 
 # Installation
 > [!NOTE]
@@ -34,9 +34,64 @@ Options:
 
 # Usage
 
-```sh
-surreal-codegen --schema ./schema.surql --query ./query.surql
+## Schema Example
+
+`./schema.surql`
+```ts
+DEFINE TABLE user SCHEMAFULL;
+DEFINE FIELD email ON user TYPE string
+  VALUE string::lowercase($value)
+  ASSERT string::is::email($value);
+DEFINE FIELD password ON user TYPE string
+  VALUE crypto::bcrypt::generate($value);
+DEFINE FIELD name ON user TYPE string
+  VALUE string::trim($value);
+DEFINE FIELD created_at ON user TYPE datetime
+  VALUE time::now()
+  READONLY;
 ```
+
+## Query Example
+
+`./queries/create_user.surql`
+```ts
+CREATE user CONTENT $user;
+```
+
+
+## Codegen
+This wil generate a `types.ts` file in the current directory, which includes all your queries, as well as some prototype and type overrides for the SurrealDB database to allow you to use the generated types in your TypeScript code.
+```sh
+surreal-codegen \
+  --schema ./schema.surql \
+  --dir ./queries \
+  --output ./surreal_queries.ts
+```
+
+## TypeScript usage
+```ts
+import { Surreal } from "surreal.js";
+import { CreateUserQuery } from "./surreal_queries"
+
+const db = new Surreal({
+  ...
+});
+
+/*
+  Result is typed as CreateUserResult from the generated types.ts file
+*/
+const result = await db.typed(CreateUserQuery, {
+  user: {
+    name: "John Doe",
+    email: "john@doe.com",
+    password: "123456",
+  } // can also be an array of users
+});
+```
+
+# Notes
+- We only currently support SCHEMAFULL tables so far, but we are working on supporting other table types.
+
 
 # Features Supported So Far
 
