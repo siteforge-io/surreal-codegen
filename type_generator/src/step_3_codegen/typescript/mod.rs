@@ -11,10 +11,14 @@ pub struct TypeData {
     pub variables: HashMap<String, ValueType>,
 }
 
-pub fn generate_typescript_output(types: &[TypeData]) -> Result<String, anyhow::Error> {
+pub fn generate_typescript_output(
+    types: &[TypeData],
+    header: &str,
+) -> Result<String, anyhow::Error> {
     let mut output = String::new();
 
-    output.push_str("import { type RecordId, Surreal } from 'surrealdb.js';\n");
+    output.push_str(header);
+    output.push_str("\n");
 
     for TypeData {
         name,
@@ -71,20 +75,11 @@ pub fn generate_typescript_output(types: &[TypeData]) -> Result<String, anyhow::
 
     output.push_str(r#"
 
-type QueryKeys = keyof Queries
-type InferVariables<Q extends keyof Queries> = Queries[Q]["variables"]
-type InferResult<Q extends keyof Queries> = Queries[Q]["result"]
-type QueryWithVariables<Q extends QueryKeys> = InferVariables<Q> extends never ? Q : Q & string
-type QueryWithoutVariables<Q extends QueryKeys> = InferVariables<Q> extends never ? Q : Exclude<Q, string>
+export type Variables<Q extends keyof Queries> = Queries[Q]["variables"] extends never ? [] : [Queries[Q]["variables"]]
 
-Surreal.prototype.typed = function <Q extends keyof Queries, V extends InferVariables<Q>>(query: Q, variables?: V): Promise<InferResult<Q>> {
-    return this.query(query, variables)
-}
-
-declare module "surrealdb.js" {
-    interface Surreal {
-        typed<Q extends QueryKeys>(query: QueryWithVariables<Q>, variables: InferVariables<Q>): Promise<InferResult<Q>>;
-        typed<Q extends QueryKeys>(query: QueryWithoutVariables<Q>): Promise<InferResult<Q>>;
+export class TypedSurreal extends Surreal {
+    typed<Q extends keyof Queries>(query: Q, ...rest: Variables<Q>): Promise<Queries[Q]["result"]> {
+        return this.query(query, rest[0])
     }
 }
 "#);

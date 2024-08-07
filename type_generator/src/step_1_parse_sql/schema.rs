@@ -193,11 +193,20 @@ fn parse_table(
             },
             is_optional: return_type.is_optional(),
             field_type: match &return_type {
-                ValueType::Any => FieldType::NestedObject(HashMap::new()),
-                ValueType::Option(box ValueType::Any) => FieldType::NestedObject(HashMap::new()),
-                ValueType::Array(box ValueType::Any) => {
-                    FieldType::NestedArray(Box::new(FieldType::NestedObject(HashMap::new())))
-                }
+                ValueType::Any => match field.flex {
+                    false => FieldType::NestedObject(HashMap::new()),
+                    true => FieldType::Simple,
+                },
+                ValueType::Option(box ValueType::Any) => match field.flex {
+                    false => FieldType::NestedObject(HashMap::new()),
+                    true => FieldType::Simple,
+                },
+                ValueType::Array(box ValueType::Any) => match field.flex {
+                    false => {
+                        FieldType::NestedArray(Box::new(FieldType::NestedObject(HashMap::new())))
+                    }
+                    true => FieldType::Simple,
+                },
                 _ => FieldType::Simple,
             },
             has_default: field.default.is_some(),

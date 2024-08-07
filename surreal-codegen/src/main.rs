@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use type_generator::step_3_codegen::typescript::{generate_type_info, generate_typescript_output};
 
@@ -22,6 +18,14 @@ struct Cli {
     /// default of `types.ts`
     #[clap(short, long, default_value = "./types.ts")]
     output: String,
+
+    /// Header to add to the top of the output file
+    /// If you specify this, you must import in RecordId and a Surreal class that has a .query(query: string, variables?: Record<string, unknown>) method
+    #[clap(
+        long,
+        default_value = "import { type RecordId, Surreal } from 'surrealdb.js'"
+    )]
+    header: String,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -45,7 +49,7 @@ fn main() -> anyhow::Result<()> {
         types.push(generate_type_info(&file_name, &query, state.clone())?);
     }
 
-    let output = generate_typescript_output(&types)?;
+    let output = generate_typescript_output(&types, &cli.header)?;
 
     std::fs::write(cli.output, output)?;
 
