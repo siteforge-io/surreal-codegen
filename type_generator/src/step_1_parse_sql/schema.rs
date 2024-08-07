@@ -38,7 +38,7 @@ pub struct FunctionParsed {
 pub enum FieldType {
     Simple,
     NestedObject(HashMap<String, FieldParsed>),
-    NestedArray(Box<FieldParsed>),
+    NestedArray(Box<FieldType>),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -104,11 +104,24 @@ impl FieldParsed {
                     false => fields,
                 }
             }
-            FieldType::NestedArray(inner_type) => {
-                let inner_type = inner_type.compute_select_type();
+            FieldType::NestedArray(box inner_type) => {
+                let select_type = match inner_type {
+                    FieldType::Simple => self.return_type.clone(),
+                    FieldType::NestedObject(fields) => {
+                        let mut select_fields = HashMap::new();
+                        for (key, value) in fields {
+                            select_fields.insert(key.clone(), value.compute_select_type());
+                        }
+                        ValueType::Object(select_fields)
+                    }
+                    FieldType::NestedArray(..) => {
+                        todo!("Nested array in nested array are not yet supported")
+                    }
+                };
+
                 match self.is_optional {
-                    true => ValueType::Option(Box::new(ValueType::Array(Box::new(inner_type)))),
-                    false => ValueType::Array(Box::new(inner_type)),
+                    true => ValueType::Option(Box::new(ValueType::Array(Box::new(select_type)))),
+                    false => ValueType::Array(Box::new(select_type)),
                 }
             }
         }
@@ -182,6 +195,9 @@ fn parse_table(
             field_type: match &return_type {
                 ValueType::Any => FieldType::NestedObject(HashMap::new()),
                 ValueType::Option(box ValueType::Any) => FieldType::NestedObject(HashMap::new()),
+                ValueType::Array(box ValueType::Any) => {
+                    FieldType::NestedArray(Box::new(FieldType::NestedObject(HashMap::new())))
+                }
                 _ => FieldType::Simple,
             },
             has_default: field.default.is_some(),
@@ -429,7 +445,11 @@ fn insert_into_object(
                 field_type: FieldType::NestedObject(fields),
                 ..
             }) => insert_into_object(idiom[1..].as_ref(), fields, field),
-            _ => anyhow::bail!("Field `{}` is not a nested object", field_ident),
+            Some(FieldParsed {
+                field_type: FieldType::NestedArray(array_type),
+                ..
+            }) => insert_into_array_type(idiom[1..].as_ref(), array_type, field),
+            _ => anyhow::bail!("Field `{}` is not a nested object or array", field_ident),
         },
         // Part::All(index) => match fields.get_mut(index) {
         //     Some(FieldInfo {
@@ -439,5 +459,24 @@ fn insert_into_object(
         //     _ => anyhow::bail!("Index `{}` is not a nested array", index),
         // },
         _ => anyhow::bail!("Invalid path `{}`", Idiom::from(idiom)),
+    }
+}
+
+fn insert_into_array_type(
+    idiom: &[Part],
+    array_type: &mut FieldType,
+    field: FieldParsed,
+) -> anyhow::Result<()> {
+    // if the idiom is empty, we're at the end of the path
+
+    match idiom.first().unwrap() {
+        // eg: foo.*.bar
+        Part::All => match array_type {
+            FieldType::NestedObject(fields) => {
+                insert_into_object(idiom[1..].as_ref(), fields, field)
+            }
+            _ => anyhow::bail!("Unimplemented path `{}`", Idiom::from(idiom)),
+        },
+        _ => anyhow::bail!("Unimplemented path `{}`", Idiom::from(idiom)),
     }
 }

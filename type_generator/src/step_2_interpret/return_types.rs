@@ -311,7 +311,13 @@ pub fn match_return_type(
     let has_next_part = parts.len() > 1;
 
     match return_type {
-        ValueType::Object(nested_fields) => get_field_from_paths(&parts[1..], nested_fields, state),
+        ValueType::Object(nested_fields) => {
+            if has_next_part {
+                get_field_from_paths(&parts[1..], nested_fields, state)
+            } else {
+                Ok(ValueType::Object(nested_fields.clone()))
+            }
+        }
         ValueType::String => Ok(ValueType::String),
         ValueType::Int => Ok(ValueType::Int),
         ValueType::Float => Ok(ValueType::Float),
