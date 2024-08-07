@@ -65,15 +65,14 @@ This wil generate a `types.ts` file in the current directory, which includes all
 surreal-codegen \
   --schema ./schema.surql \
   --dir ./queries \
-  --output ./surreal_queries.ts
+  --output ./queries.ts
 ```
 
 ## TypeScript usage
 ```ts
-import { Surreal } from "surreal.js";
-import { CreateUserQuery } from "./surreal_queries"
+import { TypedSurreal, CreateUserQuery } from "./queries"
 
-const db = new Surreal({
+const db = new TypedSurreal({
   ...
 });
 
