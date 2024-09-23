@@ -1,8 +1,6 @@
-use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
-
-use type_generator::step_3_codegen::typescript::{generate_type_info, generate_typescript_output};
-
 use clap::Parser;
+use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
+use type_generator::step_3_codegen::typescript::{generate_type_info, generate_typescript_output};
 
 #[derive(Parser)]
 struct Cli {
@@ -28,7 +26,7 @@ struct Cli {
     header: String,
 }
 
-fn main() -> anyhow::Result<()> {
+pub fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     let mut files = type_generator::step_3_codegen::read_surql_files(&cli.dir)?;
