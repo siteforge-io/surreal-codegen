@@ -16,7 +16,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           override: true
           components: rustfmt, clippy
 
@@ -40,11 +40,20 @@ jobs:
             tar -C builds -czvf dist/surreal-codegen-$target.tar.gz surreal-codegen-$target
           done
 
+      - name: Prepare npm package
+        run: |
+          cp -r npm dist/npm
+          cp dist/*.tar.gz dist/npm/
+          cd dist/npm
+          npm version ${{ github.ref_name }} --no-git-tag-version
+
       - name: Upload release
         uses: softprops/action-gh-release@v1
         with:
           body_path: CHANGELOG.md
-          files: dist/*.tar.gz
+          files: |
+            dist/*.tar.gz
+            dist/npm/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -52,5 +61,6 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          cd surreal-codegen
+          cd dist/npm
+          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
           npm publish --access public

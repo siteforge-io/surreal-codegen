@@ -1,0 +1,15 @@
+{
+    "name": "@siteforge/surreal-codegen",
+    "version": "0.1.0",
+    "description": "Surreal Code Generator",
+    "bin": {
+      "surreal-codegen": "./index.js"
+    },
+    "scripts": {
+      "postinstall": "node install.js"
+    },
+    "files": [
+      "index.js",
+      "install.js"
+    ]
+}
