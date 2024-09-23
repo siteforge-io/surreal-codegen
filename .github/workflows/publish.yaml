@@ -1,50 +1,56 @@
-name: Build and Publish WebAssembly NPM Package
+name: Build and Publish
 
 on:
-    push:
-        branches: [main]
-    pull_request:
-        branches: [main]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-    build-and-publish:
-        runs-on: ubuntu-latest
+  build-and-publish:
+    runs-on: ubuntu-latest
 
-        steps:
-            - uses: actions/checkout@v3
+    steps:
+      - uses: actions/checkout@v3
 
-            - name: Setup Rust
-              uses: actions-rs/toolchain@v1
-              with:
-                  toolchain: stable
-                  target: wasm32-unknown-unknown
-                  override: true
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
 
-            - name: Install wasm-pack
-              run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Install cross
+        run: cargo install cross
 
-            - name: Build WebAssembly
-              run: |
-                  cd surreal-codegen
-                  wasm-pack build --target web
+      - name: Run tests
+        run: cargo test --verbose --workspace
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v3
-              with:
-                  node-version: "16"
-                  registry-url: "https://registry.npmjs.org"
+      - name: Build for all targets
+        run: |
+          mkdir -p dist builds
+          for target in x86_64-pc-windows-gnu i686-pc-windows-gnu x86_64-unknown-linux-gnu x86_64-apple-darwin; do
+            cross build --release --target $target --workspace
+            mkdir -p builds/surreal-codegen-$target
+            if [[ $target == *"windows"* ]]; then
+              cp target/$target/release/*.exe builds/surreal-codegen-$target/
+            else
+              cp target/$target/release/* builds/surreal-codegen-$target/
+            fi
+            tar -C builds -czvf dist/surreal-codegen-$target.tar.gz surreal-codegen-$target
+          done
 
-            - name: Prepare NPM Package
-              run: |
-                  cd surreal-codegen/pkg
-                  npm init -y
-                  npm pkg set name="@siteforge/surreal-codegen"
-                  npm pkg set version="${{ github.ref_name }}"
-                  npm pkg set files='["surreal_codegen_bg.wasm", "surreal_codegen.js", "surreal_codegen.d.ts"]'
+      - name: Upload release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: CHANGELOG.md
+          files: dist/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Publish to NPM
-              run: |
-                  cd surreal-codegen/pkg
-                  npm publish --access public
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish npm package
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd surreal-codegen
+          npm publish --access public
