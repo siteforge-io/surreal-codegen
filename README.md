@@ -125,25 +125,25 @@ You can also define global parameters in a `global.surql` file, which will be av
 # Features Supported
 
 ### General Type Support and Handling
-- [x] `Never`
-- [x] `Unknown`
-- [x] `String`
-- [x] `Int`
-- [x] `Float`
-- [x] `Datetime`
-- [x] `Duration`
-- [x] `Decimal`
-- [x] `Bool`
-- [x] `Record`
-- [x] `Option`
-- [x] `Array`
-- [x] `Object`
-- [x] `Number`
-- [x] `Null` (for `Option`)
-- [x] `Any`
-- [x] `None`
-- [x] `Either` (mixed return types)
-- [x] Typed Literals (eg: `"foo"`, `123`, `1d`, `{ foo: 123 }`, `array<1|2>`)
+- [x] `never`
+- [x] `unknown`
+- [x] `string`
+- [x] `int`
+- [x] `float`
+- [x] `datetime`
+- [x] `duration`
+- [x] `decimal`
+- [x] `bool`
+- [x] `record<table>`
+- [x] `option<type>`
+- [x] `array<type>`
+- [x] `object`
+- [x] `number`
+- [x] `NULL`
+- [x] `NONE` (for `Option`)
+- [x] `any`
+- [x] `foo | bar` Unions (mixed return type unions)
+- [x] Surreal 2.0 typed literals (eg: `"foo"`, `123`, `1d`, `{ foo: 123 }`, `array<1|2>`)
 
 ## Objects
 - [x] `RETURN { foo: 1, bar: 2 }`
