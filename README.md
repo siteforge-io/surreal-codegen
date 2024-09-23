@@ -1,29 +1,21 @@
 # `surreal-codegen`
 > [!WARNING]
-> This is a work in progress, but we are currently using it in production at [Siteforge](https://siteforge.io) to help ensure type safety in our SurrealDB queries.
+> This is a WIP, but we are currently using it in production at [Siteforge](https://siteforge.io) to help ensure type safety in our SurrealDB queries.
+> See the [Features Supported](#features-supported) section for a list of features we currently support.
 
 # Installation
-
+> [!WARNING]
+> We haven't currently setup a build automation system, so you must build the project yourself.
 ## NPM install
 ```sh
 npm i -g @siteforge/surreal-codegen
 ```
 
 ## Manual Installation
-### Cargo Install
+You must have the rust toolchain installed, then run:
+
 ```sh
 cargo install --git https://github.com/siteforge-io/surreal-codegen.git
-```
-
-### Via Git
-1. Clone this repo
-```sh
-git clone https://github.com/siteforge-io/surreal-codegen.git
-```
-
-2. Build and install the binary
-```sh
-cargo install --path ./surreal-codegen
 ```
 
 ## Running `surreal-codegen`
@@ -133,7 +125,7 @@ You can also define global parameters in a `global.surql` file, which will be av
 - We only currently support SCHEMAFULL tables so far, but we are working on supporting other table types.
 
 
-# Features Supported So Far
+# Features Supported
 
 ### General Type Support and Handling
 - [x] `Never`

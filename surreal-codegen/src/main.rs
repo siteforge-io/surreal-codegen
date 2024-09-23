@@ -1,6 +1,6 @@
 use clap::Parser;
 use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
-use type_generator::step_3_codegen::typescript::{generate_type_info, generate_typescript_output};
+use surreal_type_generator::{step_1_parse_sql, step_2_interpret, step_3_codegen};
 
 #[derive(Parser)]
 struct Cli {
@@ -29,25 +29,29 @@ struct Cli {
 pub fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
-    let mut files = type_generator::step_3_codegen::read_surql_files(&cli.dir)?;
+    let mut files = step_3_codegen::read_surql_files(&cli.dir)?;
 
     let globals = if let Some(globals) = files.remove("globals.surql") {
-        type_generator::step_1_parse_sql::parse_value_casts(&globals)?
+        step_1_parse_sql::parse_value_casts(&globals)?
     } else {
         BTreeMap::new()
     };
 
-    let schema = type_generator::step_3_codegen::read_file(&PathBuf::from(&cli.schema))?;
-    let state = type_generator::step_2_interpret::interpret_schema(&schema, globals)?;
+    let schema = step_3_codegen::read_file(&PathBuf::from(&cli.schema))?;
+    let state = step_2_interpret::interpret_schema(&schema, globals)?;
     let state = Arc::new(state);
 
     let mut types = Vec::new();
 
     for (file_name, query) in files {
-        types.push(generate_type_info(&file_name, &query, state.clone())?);
+        types.push(step_3_codegen::typescript::generate_type_info(
+            &file_name,
+            &query,
+            state.clone(),
+        )?);
     }
 
-    let output = generate_typescript_output(&types, &cli.header)?;
+    let output = step_3_codegen::typescript::generate_typescript_output(&types, &cli.header)?;
 
     std::fs::write(cli.output, output)?;
 

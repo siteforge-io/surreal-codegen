@@ -3183,7 +3183,17 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
- "type_generator",
+ "surreal_type_generator",
+]
+
+[[package]]
+name = "surreal_type_generator"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "pretty_assertions_sorted",
+ "serde_json",
+ "surrealdb",
 ]
 
 [[package]]
@@ -3652,16 +3662,6 @@ dependencies = [
  "thiserror",
  "url",
  "utf-8",
-]
-
-[[package]]
-name = "type_generator"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "pretty_assertions_sorted",
- "serde_json",
- "surrealdb",
 ]
 
 [[package]]
