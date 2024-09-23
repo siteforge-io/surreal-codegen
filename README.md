@@ -6,10 +6,7 @@
 # Installation
 > [!WARNING]
 > We haven't currently setup a build automation system, so you must build the project yourself.
-## NPM install
-```sh
-npm i -g @siteforge/surreal-codegen
-```
+
 
 ## Manual Installation
 You must have the rust toolchain installed, then run:
