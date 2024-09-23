@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 
 use surrealdb::sql::{
     Cast, Constant, Expression, Field, Fields, Ident, Idiom, Operator, Param, Part, Value,
@@ -21,7 +21,7 @@ pub fn get_statement_fields<F>(
     get_field_and_variables: F,
 ) -> Result<ValueType, anyhow::Error>
 where
-    F: Fn(&mut HashMap<String, ValueType>, &mut QueryState) -> (),
+    F: Fn(&mut BTreeMap<String, ValueType>, &mut QueryState) -> (),
 {
     let mut return_types = Vec::new();
     let mut used_tables = HashSet::new();
@@ -58,7 +58,7 @@ where
 
 pub fn get_fields_return_values(
     fields: &Fields,
-    field_types: &HashMap<String, ValueType>,
+    field_types: &BTreeMap<String, ValueType>,
     state: &mut QueryState,
 ) -> Result<ValueType, anyhow::Error> {
     match fields {
@@ -75,7 +75,7 @@ pub fn get_fields_return_values(
             1: false,
             ..
         } => {
-            let mut map = HashMap::new();
+            let mut map = BTreeMap::new();
 
             for field in fields {
                 for (idiom, return_type) in get_field_return_type(field, &field_types, state)? {
@@ -90,7 +90,7 @@ pub fn get_fields_return_values(
 
 pub fn get_field_return_type(
     field: &Field,
-    field_types: &HashMap<String, ValueType>,
+    field_types: &BTreeMap<String, ValueType>,
     state: &mut QueryState,
 ) -> Result<Vec<(Idiom, ValueType)>, anyhow::Error> {
     match field {
@@ -122,7 +122,7 @@ pub fn get_field_return_type(
 
 pub fn get_value_return_type(
     expr: &Value,
-    field_types: &HashMap<String, ValueType>,
+    field_types: &BTreeMap<String, ValueType>,
     state: &mut QueryState,
 ) -> Result<ValueType, anyhow::Error> {
     Ok(match expr {
@@ -182,8 +182,8 @@ pub fn get_value_return_type(
 
 pub fn get_expression_return_type(
     expr: &Expression,
-    field_types: &HashMap<String, ValueType>,
-    mut state: &mut QueryState,
+    field_types: &BTreeMap<String, ValueType>,
+    state: &mut QueryState,
 ) -> Result<ValueType, anyhow::Error> {
     Ok(match expr {
         // Unary
@@ -273,7 +273,7 @@ pub fn get_parameter_return_type(
 
 pub fn get_field_from_paths(
     parts: &[Part],
-    field_types: &HashMap<String, ValueType>,
+    field_types: &BTreeMap<String, ValueType>,
     state: &mut QueryState,
 ) -> Result<ValueType, anyhow::Error> {
     match parts.first() {
@@ -305,7 +305,7 @@ pub fn get_field_from_paths(
 pub fn match_return_type(
     return_type: &ValueType,
     parts: &[Part],
-    field_types: &HashMap<String, ValueType>,
+    field_types: &BTreeMap<String, ValueType>,
     state: &mut QueryState,
 ) -> Result<ValueType, anyhow::Error> {
     let has_next_part = parts.len() > 1;

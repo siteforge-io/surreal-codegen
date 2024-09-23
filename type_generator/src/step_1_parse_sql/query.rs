@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use surrealdb::sql::{parse, Cast, Param, Statement, Value};
 
@@ -6,12 +6,12 @@ use crate::{kind_to_return_type, ValueType};
 
 pub struct QueryParsed {
     pub statements: Vec<Statement>,
-    pub casted_parameters: HashMap<String, ValueType>,
+    pub casted_parameters: BTreeMap<String, ValueType>,
 }
 
 pub fn parse_query(query: &str) -> Result<QueryParsed, anyhow::Error> {
     // collect and filter out all the variable castings
-    let mut parameter_types = HashMap::new();
+    let mut parameter_types = BTreeMap::new();
     let mut statements = Vec::new();
 
     for stmt in parse(query)?.into_iter() {

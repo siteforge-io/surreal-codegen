@@ -1,6 +1,5 @@
 mod function;
 mod object;
-mod query;
 mod return_types;
 mod schema;
 mod statements;
@@ -10,7 +9,7 @@ use crate::ValueType;
 pub use return_types::get_statement_fields;
 use return_types::get_value_return_type;
 use statements::*;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use surrealdb::sql::{Statement, Subquery};
 
 pub use schema::interpret_schema;
@@ -38,7 +37,8 @@ fn get_statement_return_type(
         Statement::Insert(insert) => get_insert_statement_return_type(insert, state),
         Statement::Update(update) => get_update_statement_return_type(update, state),
         Statement::Output(output) => get_return_statement_return_type(output, state),
-        Statement::Value(value) => get_value_return_type(value, &HashMap::new(), state),
+        Statement::Upsert(upsert) => get_upsert_statement_return_type(upsert, state),
+        Statement::Value(value) => get_value_return_type(value, &BTreeMap::new(), state),
         _ => Err(anyhow::anyhow!("Unsupported statement type: `{}`", stmt)),
     }
 }
@@ -53,7 +53,8 @@ fn get_subquery_return_type(
         Subquery::Create(create) => get_create_statement_return_type(create, state),
         Subquery::Insert(insert) => get_insert_statement_return_type(insert, state),
         Subquery::Update(update) => get_update_statement_return_type(update, state),
-        Subquery::Value(value) => get_value_return_type(value, &HashMap::new(), state),
+        Subquery::Upsert(upsert) => get_upsert_statement_return_type(upsert, state),
+        Subquery::Value(value) => get_value_return_type(value, &BTreeMap::new(), state),
         _ => Err(anyhow::anyhow!("Unsupported subquery type: `{}`", subquery)),
     }
 }

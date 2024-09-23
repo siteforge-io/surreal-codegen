@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{collections::BTreeMap, sync::Arc};
 
 use surrealdb::sql::{Block, Entry, Values};
 
@@ -18,24 +15,24 @@ use super::{
 
 #[derive(Debug)]
 pub struct SchemaState {
-    global_variables: HashMap<String, ValueType>,
+    global_variables: BTreeMap<String, ValueType>,
     pub schema: SchemaParsed,
 }
 
 #[derive(Debug)]
 pub struct QueryState {
     pub schema: Arc<SchemaState>,
-    defined_variables: HashMap<String, ValueType>,
-    inferred_variables: HashMap<String, ValueType>,
-    stack_variables: Vec<HashMap<String, ValueType>>,
+    defined_variables: BTreeMap<String, ValueType>,
+    inferred_variables: BTreeMap<String, ValueType>,
+    stack_variables: Vec<BTreeMap<String, ValueType>>,
 }
 
 impl QueryState {
-    pub fn new(schema: Arc<SchemaState>, defined_variables: HashMap<String, ValueType>) -> Self {
+    pub fn new(schema: Arc<SchemaState>, defined_variables: BTreeMap<String, ValueType>) -> Self {
         Self {
             schema,
             defined_variables,
-            inferred_variables: HashMap::new(),
+            inferred_variables: BTreeMap::new(),
             stack_variables: Vec::new(),
         }
     }
@@ -68,7 +65,7 @@ impl QueryState {
     }
 
     pub fn push_stack_frame(&mut self) {
-        self.stack_variables.push(HashMap::new());
+        self.stack_variables.push(BTreeMap::new());
     }
 
     pub fn pop_stack_frame(&mut self) {
@@ -99,8 +96,8 @@ impl QueryState {
         }
     }
 
-    pub fn extract_required_variables(&self) -> HashMap<String, ValueType> {
-        let mut variables = HashMap::new();
+    pub fn extract_required_variables(&self) -> BTreeMap<String, ValueType> {
+        let mut variables = BTreeMap::new();
 
         for (name, value) in self.defined_variables.iter() {
             variables.insert(name.clone(), value.clone());
@@ -123,11 +120,11 @@ pub struct InterpretedFunction {
     pub return_type: ValueType,
 }
 
-pub type TableFields = HashMap<String, ValueType>;
+pub type TableFields = BTreeMap<String, ValueType>;
 
 pub fn interpret_schema(
     schema: &str,
-    global_variables: HashMap<String, ValueType>,
+    global_variables: BTreeMap<String, ValueType>,
 ) -> Result<SchemaState, anyhow::Error> {
     Ok(SchemaState {
         global_variables,
@@ -207,6 +204,6 @@ pub fn get_view_return_type(
         &Into::<Values>::into(&view.what),
         state,
         Some(&view.expr),
-        |fields, state| {},
+        |_fields, _state| {},
     )
 }

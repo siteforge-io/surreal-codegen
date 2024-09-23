@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use surrealdb::sql::{parse, Cast, Param, Value};
 
 use crate::{kind_to_return_type, ValueType};
 
-pub fn parse_value_casts(query: &str) -> Result<HashMap<String, ValueType>, anyhow::Error> {
-    let mut parameter_types = HashMap::new();
+pub fn parse_value_casts(query: &str) -> Result<BTreeMap<String, ValueType>, anyhow::Error> {
+    let mut parameter_types = BTreeMap::new();
 
     for stmt in parse(query)?.into_iter() {
         match stmt {

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use surrealdb::sql::Object;
 
@@ -10,10 +10,10 @@ pub fn get_object_return_type(
     state: &mut QueryState,
     obj: &Object,
 ) -> Result<ValueType, anyhow::Error> {
-    let mut fields = HashMap::new();
+    let mut fields = BTreeMap::new();
 
     for (key, value) in obj.0.iter() {
-        let return_type = get_value_return_type(value, &HashMap::new(), state)?;
+        let return_type = get_value_return_type(value, &BTreeMap::new(), state)?;
 
         fields.insert(key.clone(), return_type);
     }

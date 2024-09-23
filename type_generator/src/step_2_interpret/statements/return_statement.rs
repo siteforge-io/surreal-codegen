@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use surrealdb::sql::statements::OutputStatement;
 
@@ -14,7 +14,7 @@ pub fn get_return_statement_return_type(
     Ok(match output {
         OutputStatement {
             what, fetch: None, ..
-        } => get_value_return_type(what, &HashMap::new(), state)?,
+        } => get_value_return_type(what, &BTreeMap::new(), state)?,
         OutputStatement {
             what: _,
             fetch: Some(_),

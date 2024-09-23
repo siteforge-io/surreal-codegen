@@ -4,10 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# surrealdb = "1.5.4"
-# surrealdb = { version = "1.5.4", features = ["sql2", "kv-mem"] } # do we remove kv-mem?
-# wait for https://github.com/surrealdb/surrealdb/pull/4375
-surrealdb = { git = "https://github.com/surrealdb/surrealdb.git", rev = "a5a3545", features = [] }
+# surrealdb = { version = "2.0.1", features = ["kv-mem"] }
+# wait for https://github.com/surrealdb/surrealdb/pull/4861
+surrealdb = { git = "https://github.com/surrealdb/surrealdb.git", rev = "76acd0015d17fdcfe95f2486a79d4326568be180" }
 anyhow = "1.0.83"
 serde_json = "1.0.117"
 

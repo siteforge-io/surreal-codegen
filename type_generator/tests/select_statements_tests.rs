@@ -1,5 +1,4 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use std::collections::HashMap;
 use surrealdb::sql::Table;
 use type_generator::{QueryResult, ValueType};
 
@@ -92,7 +91,7 @@ DEFINE FIELD name ON user TYPE string;
     assert_eq_sorted!(
         return_types,
         vec![ValueType::Option(Box::new(ValueType::Object(
-            HashMap::from([("name".to_string(), ValueType::String)])
+            [("name".to_string(), ValueType::String)].into()
         )))]
     );
 
@@ -119,10 +118,11 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         variables,
-        HashMap::from([(
+        [(
             "user".to_string(),
             ValueType::Record(vec![Table::from("user")])
-        )])
+        )]
+        .into()
     );
 
     assert_eq_sorted!(

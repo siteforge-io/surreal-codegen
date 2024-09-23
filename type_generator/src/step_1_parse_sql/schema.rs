@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use surrealdb::sql::{
     parse,
@@ -12,42 +12,42 @@ use surrealdb::sql::{
 
 use crate::{kind_to_return_type, ValueType};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub struct SchemaParsed {
-    pub tables: HashMap<String, TableParsed>,
-    pub functions: HashMap<String, FunctionParsed>,
-    pub views: HashMap<String, ViewParsed>,
+    pub tables: BTreeMap<String, TableParsed>,
+    pub functions: BTreeMap<String, FunctionParsed>,
+    pub views: BTreeMap<String, ViewParsed>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ViewParsed {
     pub name: String,
     pub expr: Fields,
     pub what: Tables,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FunctionParsed {
     pub name: String,
     pub arguments: Vec<(String, ValueType)>,
     pub block: Block,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 
 pub enum FieldType {
     Simple,
-    NestedObject(HashMap<String, FieldParsed>),
+    NestedObject(BTreeMap<String, FieldParsed>),
     NestedArray(Box<FieldType>),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub struct TableParsed {
     pub name: String,
-    pub fields: HashMap<String, FieldParsed>,
+    pub fields: BTreeMap<String, FieldParsed>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub struct FieldParsed {
     pub name: String,
     pub is_optional: bool,
@@ -67,7 +67,7 @@ impl FieldParsed {
                 false => self.return_type.clone(),
             },
             FieldType::NestedObject(obj) => {
-                let mut fields = HashMap::new();
+                let mut fields = BTreeMap::new();
                 for (key, value) in obj {
                     if !value.has_override_value {
                         fields.insert(key.clone(), value.compute_create_type());
@@ -92,7 +92,7 @@ impl FieldParsed {
                 false => self.return_type.clone(),
             },
             FieldType::NestedObject(obj) => {
-                let mut fields = HashMap::new();
+                let mut fields = BTreeMap::new();
                 for (key, value) in obj {
                     fields.insert(key.clone(), value.compute_select_type());
                 }
@@ -108,7 +108,7 @@ impl FieldParsed {
                 let select_type = match inner_type {
                     FieldType::Simple => self.return_type.clone(),
                     FieldType::NestedObject(fields) => {
-                        let mut select_fields = HashMap::new();
+                        let mut select_fields = BTreeMap::new();
                         for (key, value) in fields {
                             select_fields.insert(key.clone(), value.compute_select_type());
                         }
@@ -135,8 +135,8 @@ impl FieldParsed {
 }
 
 impl TableParsed {
-    pub fn compute_create_fields(&self) -> HashMap<String, ValueType> {
-        let mut fields = HashMap::new();
+    pub fn compute_create_fields(&self) -> BTreeMap<String, ValueType> {
+        let mut fields = BTreeMap::new();
         for (key, field) in &self.fields {
             if !field.has_override_value {
                 fields.insert(key.clone(), field.compute_create_type());
@@ -145,16 +145,16 @@ impl TableParsed {
         fields
     }
 
-    pub fn compute_select_fields(&self) -> HashMap<String, ValueType> {
-        let mut fields = HashMap::new();
+    pub fn compute_select_fields(&self) -> BTreeMap<String, ValueType> {
+        let mut fields = BTreeMap::new();
         for (key, value) in &self.fields {
             fields.insert(key.clone(), value.compute_select_type());
         }
         fields
     }
 
-    pub fn compute_update_fields(&self) -> HashMap<String, ValueType> {
-        let mut fields = HashMap::new();
+    pub fn compute_update_fields(&self) -> BTreeMap<String, ValueType> {
+        let mut fields = BTreeMap::new();
         for (key, value) in &self.fields {
             fields.insert(key.clone(), value.compute_update_type());
         }
@@ -166,7 +166,7 @@ fn parse_table(
     table: &DefineTableStatement,
     field_definitions: &Vec<(Idiom, DefineFieldStatement)>,
 ) -> anyhow::Result<TableParsed> {
-    let mut fields = HashMap::from([(
+    let mut fields = BTreeMap::from([(
         "id".into(),
         FieldParsed {
             name: "id".into(),
@@ -194,16 +194,16 @@ fn parse_table(
             is_optional: return_type.is_optional(),
             field_type: match &return_type {
                 ValueType::Any => match field.flex {
-                    false => FieldType::NestedObject(HashMap::new()),
+                    false => FieldType::NestedObject(BTreeMap::new()),
                     true => FieldType::Simple,
                 },
                 ValueType::Option(box ValueType::Any) => match field.flex {
-                    false => FieldType::NestedObject(HashMap::new()),
+                    false => FieldType::NestedObject(BTreeMap::new()),
                     true => FieldType::Simple,
                 },
                 ValueType::Array(box ValueType::Any) => match field.flex {
                     false => {
-                        FieldType::NestedArray(Box::new(FieldType::NestedObject(HashMap::new())))
+                        FieldType::NestedArray(Box::new(FieldType::NestedObject(BTreeMap::new())))
                     }
                     true => FieldType::Simple,
                 },
@@ -333,10 +333,12 @@ fn entry_uses_value_param(entry: &Entry) -> Result<bool, anyhow::Error> {
     })
 }
 
-fn query_uses_value_param(query: &Query) -> Result<bool, anyhow::Error> {
-    Ok(match query {
-        _ => anyhow::bail!("Query expressions not supported in VALUE clause"),
-    })
+fn query_uses_value_param(_query: &Query) -> Result<bool, anyhow::Error> {
+    anyhow::bail!("Query expressions not supported in VALUE clause")
+    // Ok(match query {
+    //     #[allow(unreachable_patterns)]
+    //     _ => anyhow::bail!("Query expressions not supported in VALUE clause"),
+    // })
 }
 
 pub fn parse_schema(schema: &str) -> Result<SchemaParsed, anyhow::Error> {
@@ -347,9 +349,9 @@ pub fn parse_schema(schema: &str) -> Result<SchemaParsed, anyhow::Error> {
         fields: Vec<(Idiom, DefineFieldStatement)>,
     }
 
-    let mut tables = HashMap::new();
-    let mut views = HashMap::new();
-    let mut functions = HashMap::new();
+    let mut tables = BTreeMap::new();
+    let mut views = BTreeMap::new();
+    let mut functions = BTreeMap::new();
 
     for stmt in statements.into_iter() {
         match stmt {
@@ -419,7 +421,7 @@ pub fn parse_schema(schema: &str) -> Result<SchemaParsed, anyhow::Error> {
     }
 
     let tables = {
-        let mut new_tables = HashMap::new();
+        let mut new_tables = BTreeMap::new();
         for (name, table) in tables.iter_mut() {
             new_tables.insert(name.clone(), parse_table(&table.definition, &table.fields)?);
         }
@@ -435,7 +437,7 @@ pub fn parse_schema(schema: &str) -> Result<SchemaParsed, anyhow::Error> {
 
 fn insert_into_object(
     idiom: &[Part],
-    fields: &mut HashMap<String, FieldParsed>,
+    fields: &mut BTreeMap<String, FieldParsed>,
     field: FieldParsed,
 ) -> anyhow::Result<()> {
     // if the idiom is empty, we're at the end of the path

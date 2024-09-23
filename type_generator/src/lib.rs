@@ -1,15 +1,15 @@
 #![feature(box_patterns)]
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
-use surrealdb::sql::{Kind, Part, Table};
+use surrealdb::sql::{Duration, Kind, Literal, Number, Table};
 pub mod step_1_parse_sql;
 pub mod step_2_interpret;
 pub mod step_3_codegen;
 
 pub use step_3_codegen::QueryResult;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ValueType {
     Any,
     Never,
@@ -24,11 +24,18 @@ pub enum ValueType {
     Duration,
     Decimal,
     Bool,
-    Object(HashMap<String, ValueType>),
+    Object(BTreeMap<String, ValueType>),
     Array(Box<ValueType>),
     Either(Vec<ValueType>),
     Record(Vec<Table>),
     Option(Box<ValueType>),
+
+    // Literals
+    StringLiteral(String),
+    NumberLiteral(Number),
+    DurationLiteral(Duration),
+    // TOOD: Sets
+    // TODO: Geometries
 }
 
 impl ValueType {
@@ -64,107 +71,42 @@ pub fn kind_to_return_type(kind: &Kind) -> Result<ValueType, anyhow::Error> {
         Kind::Uuid => ValueType::Uuid,
         Kind::Array(kind, _) => ValueType::Array(Box::new(kind_to_return_type(kind)?)),
         Kind::Object => ValueType::Any,
+        Kind::Literal(literal) => match literal {
+            Literal::String(s) => ValueType::StringLiteral(s.0.clone()),
+            Literal::Number(n) => ValueType::NumberLiteral(n.clone()),
+            Literal::Duration(d) => ValueType::DurationLiteral(d.clone()),
+            Literal::Object(obj) => {
+                let mut fields = BTreeMap::new();
+                for (key, value) in obj {
+                    fields.insert(key.into(), kind_to_return_type(value)?);
+                }
+                ValueType::Object(fields)
+            }
+            Literal::Array(values) => {
+                let mut eithers = Vec::new();
+                for value in values {
+                    eithers.push(kind_to_return_type(value)?);
+                }
+                if eithers.len() == 1 {
+                    ValueType::Array(Box::new(eithers.into_iter().next().unwrap()))
+                } else {
+                    ValueType::Array(Box::new(ValueType::Either(eithers)))
+                }
+            }
+            _ => anyhow::bail!("Unknown literal: {:?}", literal),
+        },
         Kind::Point => anyhow::bail!("Points are not yet supported"),
         Kind::Bytes => anyhow::bail!("Bytes is not yet supported"),
         Kind::Geometry(_) => anyhow::bail!("Geometry is not yet supported"),
         Kind::Set(kind, _) => ValueType::Array(Box::new(kind_to_return_type(kind)?)),
-        Kind::Either(_) => anyhow::bail!("Either is not yet supported"),
+        Kind::Either(kinds) => {
+            let mut types = Vec::new();
+            for kind in kinds {
+                types.push(kind_to_return_type(kind)?);
+            }
+            ValueType::Either(types)
+        }
         #[allow(unreachable_patterns)]
         _ => anyhow::bail!("Unknown kind: {:?}", kind),
     })
-}
-
-fn path_to_type(parts: &[Part], final_type: ValueType) -> ValueType {
-    if parts.is_empty() {
-        return final_type;
-    }
-
-    match &parts[0] {
-        Part::Field(ident) => {
-            // If this is the last part, return it as an object with the final type
-            if parts.len() == 1 {
-                ValueType::Object(HashMap::from([(ident.to_string(), final_type)]))
-            } else {
-                // Otherwise, continue building the structure
-                let inner_type = path_to_type(&parts[1..], final_type);
-                ValueType::Object(HashMap::from([(ident.to_string(), inner_type)]))
-            }
-        }
-        Part::All => {
-            // If we encounter '*', we need to create an array type
-            if parts.len() == 1 {
-                // If '*' is the last part, return an array of the final type
-                ValueType::Array(Box::new(final_type))
-            } else {
-                // Otherwise, there are more parts to process after '*'
-                // So we continue and wrap the inner type in an array
-                let inner_type = path_to_type(&parts[1..], final_type);
-                ValueType::Array(Box::new(inner_type))
-            }
-        }
-        _ => unreachable!("Unhandled part type in path."),
-    }
-}
-
-fn merge_fields(base: &mut HashMap<String, ValueType>, new_type: ValueType) {
-    if let ValueType::Object(new_fields) = new_type {
-        for (key, value) in new_fields {
-            if let Some(existing) = base.get_mut(&key) {
-                merge_fields_deep(existing, value);
-            } else {
-                base.insert(key, value);
-            }
-        }
-    } else {
-        panic!("Top level should always be an object in these definitions.");
-    }
-}
-
-fn merge_fields_deep(existing: &mut ValueType, new: ValueType) {
-    match (existing, new) {
-        (ValueType::Object(ref mut existing_fields), ValueType::Object(new_fields)) => {
-            for (key, value) in new_fields {
-                if let Some(sub_existing) = existing_fields.get_mut(&key) {
-                    merge_fields_deep(sub_existing, value);
-                } else {
-                    existing_fields.insert(key, value);
-                }
-            }
-        }
-        (ValueType::Array(ref mut existing_element_type), ValueType::Array(new_element_type)) => {
-            merge_fields_deep(existing_element_type, *new_element_type);
-        }
-        // DEFINE FIELD xyz ON user TYPE option<object>;
-        // DEFINE FIELD xyz.foo ON user TYPE option<string>;
-        //
-        // FROM : Option(Any)
-        // THIS : Object(HashMap { foo: Option(String) })
-        // INTO : Option(Object(HashMap { foo: Option(String) }))
-        (existing @ ValueType::Option(box ValueType::Any), ValueType::Object(new_fields)) => {
-            *existing = ValueType::Option(Box::new(ValueType::Object(new_fields)));
-        }
-        // DEFINE FIELD xyz ON user TYPE option<object>;
-        // DEFINE FIELD xyz.foo ON user TYPE option<string>;
-        // DEFINE FIELD xyz.abc ON user TYPE option<string>;
-
-        // FROM : Option(Object(HashMap { foo: Option(String) }))
-        // THIS : Object(HashMap { abc: Option(String) }))
-        // INTO : Option(Object(HashMap { foo: Option(String), abc: Option(String) }))
-        (
-            ValueType::Option(box ValueType::Object(existing_fields)),
-            ValueType::Object(new_fields),
-        ) => {
-            for (key, value) in new_fields {
-                if let Some(sub_existing) = existing_fields.get_mut(&key) {
-                    merge_fields_deep(sub_existing, value);
-                } else {
-                    existing_fields.insert(key, value);
-                }
-            }
-        }
-
-        (existing, new) => {
-            *existing = new;
-        }
-    }
 }

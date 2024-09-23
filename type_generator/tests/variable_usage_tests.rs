@@ -1,5 +1,4 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use std::collections::HashMap;
 use type_generator::{QueryResult, ValueType};
 
 #[test]
@@ -19,17 +18,20 @@ DEFINE FIELD name ON user TYPE string;
     } = type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     // $before should not be a required variable
-    assert_eq_sorted!(variables, HashMap::from([]));
+    assert_eq_sorted!(variables, [].into());
 
     assert_eq_sorted!(
         return_types,
         vec![ValueType::Array(Box::new(ValueType::Object(
             [(
                 "before".into(),
-                ValueType::Object(HashMap::from([
-                    ("id".into(), ValueType::Record(vec!["user".into()])),
-                    ("name".into(), ValueType::String)
-                ]))
+                ValueType::Object(
+                    [
+                        ("id".into(), ValueType::Record(vec!["user".into()])),
+                        ("name".into(), ValueType::String)
+                    ]
+                    .into()
+                )
             )]
             .into()
         )))]
@@ -59,7 +61,7 @@ DEFINE FIELD baz ON abc TYPE string;
     } = type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     // $before should not be a required variable
-    assert_eq_sorted!(variables, HashMap::from([]));
+    assert_eq_sorted!(variables, [].into());
 
     assert_eq_sorted!(
         return_types,
@@ -92,7 +94,7 @@ DEFINE FIELD name ON user TYPE string;
     } = type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     // $after should not be a required variable
-    assert_eq_sorted!(variables, HashMap::from([]));
+    assert_eq_sorted!(variables, [].into());
 
     assert_eq_sorted!(
         return_types,
@@ -124,7 +126,7 @@ DEFINE FIELD name ON user TYPE string;
     } = type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     // $this should not be a required variable
-    assert_eq_sorted!(variables, HashMap::from([]));
+    assert_eq_sorted!(variables, [].into());
 
     assert_eq_sorted!(
         return_types,
@@ -160,7 +162,7 @@ DEFINE FIELD name ON user TYPE string;
     } = type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     // $parent should not be a required variable
-    assert_eq_sorted!(variables, HashMap::from([]));
+    assert_eq_sorted!(variables, [].into());
 
     assert_eq_sorted!(
         return_types,

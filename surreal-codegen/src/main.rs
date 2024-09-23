@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 
 use type_generator::step_3_codegen::typescript::{generate_type_info, generate_typescript_output};
 
@@ -36,7 +36,7 @@ fn main() -> anyhow::Result<()> {
     let globals = if let Some(globals) = files.remove("globals.surql") {
         type_generator::step_1_parse_sql::parse_value_casts(&globals)?
     } else {
-        HashMap::new()
+        BTreeMap::new()
     };
 
     let schema = type_generator::step_3_codegen::read_file(&PathBuf::from(&cli.schema))?;

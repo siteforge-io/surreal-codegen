@@ -1,0 +1,50 @@
+name: Build and Publish WebAssembly NPM Package
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    build-and-publish:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Setup Rust
+              uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+                  target: wasm32-unknown-unknown
+                  override: true
+
+            - name: Install wasm-pack
+              run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+            - name: Build WebAssembly
+              run: |
+                  cd surreal-codegen
+                  wasm-pack build --target web
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "16"
+                  registry-url: "https://registry.npmjs.org"
+
+            - name: Prepare NPM Package
+              run: |
+                  cd surreal-codegen/pkg
+                  npm init -y
+                  npm pkg set name="@your-npm-username/surreal-codegen-wasm"
+                  npm pkg set version="${{ github.ref_name }}"
+                  npm pkg set files='["surreal_codegen_bg.wasm", "surreal_codegen.js", "surreal_codegen.d.ts"]'
+
+            - name: Publish to NPM
+              run: |
+                  cd surreal-codegen/pkg
+                  npm publish --access public
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

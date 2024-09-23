@@ -1,8 +1,7 @@
-use std::collections::HashMap;
-
-use surrealdb::sql::{Ident, Idiom, Param, Part, Thing, Value};
+use std::collections::BTreeMap;
 
 use crate::ValueType;
+use surrealdb::sql::{Ident, Param, Part, Thing, Value};
 
 use super::schema::{QueryState, TableFields};
 
@@ -33,7 +32,7 @@ pub fn get_what_fields(
 }
 
 pub fn merge_into_map_recursively(
-    map: &mut HashMap<String, ValueType>,
+    map: &mut BTreeMap<String, ValueType>,
     parts: &[Part],
     return_type: ValueType,
 ) -> Result<(), anyhow::Error> {
@@ -49,7 +48,7 @@ pub fn merge_into_map_recursively(
                 // check if the return type is a double optional, because something like xyz.abc returns option<option<string>> if xyz and abc are both optional
                 if is_double_optional(&return_type) {
                     let next_map = map.entry(field_name.to_string()).or_insert_with(|| {
-                        ValueType::Option(Box::new(ValueType::Object(HashMap::new())))
+                        ValueType::Option(Box::new(ValueType::Object(BTreeMap::new())))
                     });
 
                     match next_map {
@@ -60,18 +59,33 @@ pub fn merge_into_map_recursively(
                                 return_type.expect_option()?,
                             )?
                         }
-                        _ => Err(anyhow::anyhow!("Unsupported return type: {:?}", next_map))?,
+                        // TODO: If we have something like SELECT *, xyz.abc FROM xyz, it will fail because it thinks `xyz` is already a record
+                        // it instead needs to replace here
+                        // ValueType::Option(box ValueType::Record(tables)) => {
+                        //     merge_into_map_recursively(
+                        //         tables[0].1.clone(),
+                        //         &parts[1..],
+                        //         return_type.expect_option()?,
+                        //     )?
+                        // }
+                        _ => Err(anyhow::anyhow!(
+                            "Unsupported field return type: {:?}",
+                            next_map
+                        ))?,
                     }
                 } else {
                     let next_map = map
                         .entry(field_name.to_string())
-                        .or_insert_with(|| ValueType::Object(HashMap::new()));
+                        .or_insert_with(|| ValueType::Object(BTreeMap::new()));
 
                     match next_map {
                         ValueType::Object(nested_fields) => {
                             merge_into_map_recursively(nested_fields, &parts[1..], return_type)?
                         }
-                        _ => Err(anyhow::anyhow!("Unsupported return type: {:?}", next_map))?,
+                        _ => Err(anyhow::anyhow!(
+                            "Unsupported field return type: {:?}",
+                            next_map
+                        ))?,
                     }
                 }
             }

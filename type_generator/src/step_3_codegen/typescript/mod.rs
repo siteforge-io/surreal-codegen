@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 
 use surrealdb::sql::Statements;
 
@@ -8,7 +8,7 @@ pub struct TypeData {
     pub name: String,
     pub statements: Statements,
     pub return_type: Vec<ValueType>,
-    pub variables: HashMap<String, ValueType>,
+    pub variables: BTreeMap<String, ValueType>,
 }
 
 pub fn generate_typescript_output(
@@ -180,6 +180,13 @@ fn generate_type_definition(return_type: &ValueType) -> Result<String, anyhow::E
             let string = generate_type_definition(&**optional_value)?;
             Ok(format!("{} | undefined", string))
         }
+
+        // ========
+        // Literals
+        // ========
+        ValueType::StringLiteral(string) => Ok(serde_json::to_string(&string)?),
+        ValueType::DurationLiteral(_duration) => Ok("Duration".to_string()),
+        ValueType::NumberLiteral(number) => Ok(number.to_string()),
     }
 }
 

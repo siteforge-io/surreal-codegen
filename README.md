@@ -145,6 +145,7 @@ You can also define global parameters in a `global.surql` file, which will be av
 - [x] `Any`
 - [x] `None`
 - [x] `Either` (mixed return types)
+- [x] Typed Literals (eg: `"foo"`, `123`, `1d`, `{ foo: 123 }`, `array<1|2>`)
 
 ## Objects
 - [x] `RETURN { foo: 1, bar: 2 }`
@@ -213,7 +214,15 @@ You can also define global parameters in a `global.surql` file, which will be av
 - [ ] `SET foo = $bar` parameter inference
 
 ### `UPSERT` statements
-- [ ] TODO
+- [X] `RETURN BEFORE`
+- [X] `RETURN AFTER`
+- [X] `RETURN DIFF`
+- [X] `RETRUN @statement_param` with `$after` field access
+- [ ] `MERGE { foo: $bar }` parameter inference
+- [ ] `MERGE $foo` parameter inference
+- [ ] `CONTENT { foo: $bar }` parameter inference
+- [X] `CONTENT $foo` parameter inference
+- [ ] `SET foo = $bar` parameter inference
 
 
 ### Value expressions
@@ -249,6 +258,7 @@ You can also define global parameters in a `global.surql` file, which will be av
 - [x] `UPDATE` statements
 - [x] `CREATE` statements
 - [ ] `RELATE` statements
+- [ ] `UPSERT` statements
 
 ### Parameter expressions
 - [x] Custom global `$param` definitions in a `global.surql` file

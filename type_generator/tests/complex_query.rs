@@ -1,4 +1,7 @@
-use type_generator::QueryResult;
+// use std::collections::HashMap;
+
+// use pretty_assertions_sorted::assert_eq_sorted;
+// use type_generator::{QueryResult, ValueType};
 
 // #[test]
 // fn test_complex_query() -> anyhow::Result<()> {
@@ -36,6 +39,96 @@ use type_generator::QueryResult;
 
 //     let QueryResult { return_types, .. } =
 //         type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+//     Ok(())
+// }
+
+// #[test]
+// fn aggregate_nested_field() -> anyhow::Result<()> {
+//     let schema = r#"
+// DEFINE TABLE task SCHEMAFULL;
+// DEFINE FIELD last_updated ON TABLE task TYPE datetime;
+// DEFINE FIELD task_id ON TABLE task TYPE string;
+
+// DEFINE TABLE task_view AS
+//     SELECT
+//         *,
+//         (
+//             SELECT VALUE id
+//             FROM ONLY task
+//             WHERE
+//                 last_updated < $parent.last_updated
+//                 AND task_id = $parent.task_id
+//             LIMIT 1
+//         )[0] AS previous
+//     FROM task;
+// "#;
+
+//     let query = r#"
+// SELECT
+//     *,
+//     previous.last_updated
+// FROM task_view
+// "#;
+
+//     let QueryResult { return_types, .. } =
+//         type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+//     assert_eq_sorted!(
+//         return_types,
+//         vec![ValueType::Object(HashMap::from([(
+//             "previous".to_string(),
+//             ValueType::Object(HashMap::from([(
+//                 "last_updated".to_string(),
+//                 ValueType::Datetime
+//             ),]))
+//         ),]))]
+//     );
+
+//     Ok(())
+// }
+
+// #[test]
+// fn aggregate_nested_field_array() -> anyhow::Result<()> {
+//     let schema = r#"
+// DEFINE TABLE task SCHEMAFULL;
+// DEFINE FIELD last_updated ON TABLE task TYPE datetime;
+// DEFINE FIELD task_id ON TABLE task TYPE string;
+
+// DEFINE TABLE task_view AS
+//     SELECT
+//         *,
+//         (
+//             SELECT VALUE id
+//             FROM ONLY task
+//             WHERE
+//                 last_updated < $parent.last_updated
+//                 AND task_id = $parent.task_id
+//             LIMIT 1
+//         ) AS previous
+//     FROM task;
+// "#;
+
+//     let query = r#"
+// SELECT
+//     *,
+//     previous.last_updated
+// FROM task_view
+// "#;
+
+//     let QueryResult { return_types, .. } =
+//         type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+//     assert_eq_sorted!(
+//         return_types,
+//         vec![ValueType::Object(HashMap::from([(
+//             "previous".to_string(),
+//             ValueType::Object(HashMap::from([(
+//                 "last_updated".to_string(),
+//                 ValueType::Datetime
+//             ),]))
+//         ),]))]
+//     );
 
 //     Ok(())
 // }
