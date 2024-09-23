@@ -38,7 +38,7 @@ jobs:
               run: |
                   cd surreal-codegen/pkg
                   npm init -y
-                  npm pkg set name="@your-npm-username/surreal-codegen-wasm"
+                  npm pkg set name="@siteforge/surreal-codegen"
                   npm pkg set version="${{ github.ref_name }}"
                   npm pkg set files='["surreal_codegen_bg.wasm", "surreal_codegen.js", "surreal_codegen.d.ts"]'
 
