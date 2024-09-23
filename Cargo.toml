@@ -1,7 +1,4 @@
 [workspace]
 resolver = "2"
 
-members = [
-    "surreal-codegen",
-    "type_generator",
-]
+members = ["surreal-codegen", "surreal_type_generator"]

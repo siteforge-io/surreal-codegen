@@ -3,21 +3,30 @@
 > This is a work in progress, but we are currently using it in production at [Siteforge](https://siteforge.io) to help ensure type safety in our SurrealDB queries.
 
 # Installation
-> [!NOTE]
-> Currently I haven't published this as a easily installable dependency, so you will need to `git clone` this repo and build it yourself.
 
+## NPM install
+```sh
+npm i -g @siteforge/surreal-codegen
+```
+
+## Manual Installation
+### Cargo Install
+```sh
+cargo install --git https://github.com/siteforge-io/surreal-codegen.git
+```
+
+### Via Git
 1. Clone this repo
 ```sh
 git clone https://github.com/siteforge-io/surreal-codegen.git
 ```
 
-2. Build the binary
+2. Build and install the binary
 ```sh
 cargo install --path ./surreal-codegen
 ```
 
-3. Run the binary
-
+## Running `surreal-codegen`
 ```sh
 surreal-codegen --help
 ```

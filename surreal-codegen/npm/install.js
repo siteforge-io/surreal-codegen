@@ -23,7 +23,7 @@ switch(platform) {
     process.exit(1);
 }
 
-const url = `https://github.com/your-username/your-repo/releases/download/v${version}/${binaryName}`;
+const url = `https://github.com/siteforge-io/surreal-codegen/releases/download/v${version}/${binaryName}`;
 const outputPath = path.join(__dirname, binaryName);
 
 const downloadBinary = async () => {
