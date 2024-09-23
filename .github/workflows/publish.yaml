@@ -1,66 +1,66 @@
-name: Build and Publish
+# name: Build and Publish
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+# on:
+#   push:
+#     branches: [main]
+#   pull_request:
+#     branches: [main]
 
-jobs:
-  build-and-publish:
-    runs-on: ubuntu-latest
+# jobs:
+#   build-and-publish:
+#     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v3
+#     steps:
+#       - uses: actions/checkout@v3
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          components: rustfmt, clippy
+#       - name: Install Rust
+#         uses: actions-rs/toolchain@v1
+#         with:
+#           toolchain: nightly
+#           override: true
+#           components: rustfmt, clippy
 
-      - name: Install cross
-        run: cargo install cross
+#       - name: Install cross
+#         run: cargo install cross
 
-      - name: Run tests
-        run: cargo test --workspace
+#       - name: Run tests
+#         run: cargo test --workspace
 
-      - name: Build for all targets
-        run: |
-          mkdir -p dist builds
-          for target in x86_64-pc-windows-gnu i686-pc-windows-gnu x86_64-unknown-linux-gnu x86_64-apple-darwin; do
-            cross build --release --target $target --workspace
-            mkdir -p builds/surreal-codegen-$target
-            if [[ $target == *"windows"* ]]; then
-              cp target/$target/release/*.exe builds/surreal-codegen-$target/
-            else
-              cp target/$target/release/* builds/surreal-codegen-$target/
-            fi
-            tar -C builds -czvf dist/surreal-codegen-$target.tar.gz surreal-codegen-$target
-          done
+#       - name: Build for all targets
+#         run: |
+#           mkdir -p dist builds
+#           for target in x86_64-pc-windows-gnu i686-pc-windows-gnu x86_64-unknown-linux-gnu x86_64-apple-darwin; do
+#             cross build --release --target $target --workspace
+#             mkdir -p builds/surreal-codegen-$target
+#             if [[ $target == *"windows"* ]]; then
+#               cp target/$target/release/*.exe builds/surreal-codegen-$target/
+#             else
+#               cp target/$target/release/* builds/surreal-codegen-$target/
+#             fi
+#             tar -C builds -czvf dist/surreal-codegen-$target.tar.gz surreal-codegen-$target
+#           done
 
-      - name: Prepare npm package
-        run: |
-          cp -r npm dist/npm
-          cp dist/*.tar.gz dist/npm/
-          cd dist/npm
-          npm version ${{ github.ref_name }} --no-git-tag-version
+#       - name: Prepare npm package
+#         run: |
+#           cp -r npm dist/npm
+#           cp dist/*.tar.gz dist/npm/
+#           cd dist/npm
+#           npm version ${{ github.ref_name }} --no-git-tag-version
 
-      - name: Upload release
-        uses: softprops/action-gh-release@v1
-        with:
-          body_path: CHANGELOG.md
-          files: |
-            dist/*.tar.gz
-            dist/npm/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#       - name: Upload release
+#         uses: softprops/action-gh-release@v1
+#         with:
+#           body_path: CHANGELOG.md
+#           files: |
+#             dist/*.tar.gz
+#             dist/npm/*
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish npm package
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          cd dist/npm
-          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
-          npm publish --access public
+#       - name: Publish npm package
+#         env:
+#           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+#         run: |
+#           cd dist/npm
+#           echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
+#           npm publish --access public
