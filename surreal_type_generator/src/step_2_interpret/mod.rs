@@ -23,24 +23,27 @@ pub fn interpret_query(
     statements
         .iter()
         .map(|stmt| get_statement_return_type(stmt, state))
+        .filter_map(|result| result.transpose())
         .collect()
 }
 
 fn get_statement_return_type(
     stmt: &Statement,
     state: &mut QueryState,
-) -> Result<ValueType, anyhow::Error> {
-    match stmt {
-        Statement::Select(select) => get_select_statement_return_type(select, state),
-        Statement::Delete(delete) => get_delete_statement_return_type(delete, state),
-        Statement::Create(create) => get_create_statement_return_type(create, state),
-        Statement::Insert(insert) => get_insert_statement_return_type(insert, state),
-        Statement::Update(update) => get_update_statement_return_type(update, state),
-        Statement::Output(output) => get_return_statement_return_type(output, state),
-        Statement::Upsert(upsert) => get_upsert_statement_return_type(upsert, state),
-        Statement::Value(value) => get_value_return_type(value, &BTreeMap::new(), state),
-        _ => Err(anyhow::anyhow!("Unsupported statement type: `{}`", stmt)),
-    }
+) -> Result<Option<ValueType>, anyhow::Error> {
+    Ok(Some(match stmt {
+        Statement::Select(select) => get_select_statement_return_type(select, state)?,
+        Statement::Delete(delete) => get_delete_statement_return_type(delete, state)?,
+        Statement::Create(create) => get_create_statement_return_type(create, state)?,
+        Statement::Insert(insert) => get_insert_statement_return_type(insert, state)?,
+        Statement::Update(update) => get_update_statement_return_type(update, state)?,
+        Statement::Output(output) => get_return_statement_return_type(output, state)?,
+        Statement::Upsert(upsert) => get_upsert_statement_return_type(upsert, state)?,
+        Statement::Value(value) => get_value_return_type(value, &BTreeMap::new(), state)?,
+        Statement::Begin(_) => return Ok(None),
+        Statement::Commit(_) => return Ok(None),
+        _ => anyhow::bail!("Unsupported statement type: `{}`", stmt),
+    }))
 }
 
 fn get_subquery_return_type(

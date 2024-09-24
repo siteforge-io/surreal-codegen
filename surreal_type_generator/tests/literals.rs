@@ -1,6 +1,6 @@
 use pretty_assertions_sorted;
+use surreal_type_generator::{QueryResult, ValueType};
 use surrealdb::sql::Duration;
-use type_generator::{QueryResult, ValueType};
 
 #[test]
 fn literal_types() -> anyhow::Result<()> {
@@ -15,7 +15,7 @@ CREATE ONLY baz CONTENT {
 }"#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     pretty_assertions_sorted::assert_eq_sorted!(
         return_types,

@@ -1,6 +1,6 @@
 // use pretty_assertions_sorted::assert_eq_sorted;
 // use std::collections::HashMap;
-// use type_generator::ValueType;
+// use surreal_type_generator::ValueType;
 
 // #[test]
 // fn insert_with_single_field() -> anyhow::Result<()> {
@@ -14,7 +14,7 @@
 // DEFINE FIELD name ON user TYPE string;
 // "#;
 
-//     let codegen_info = type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
+//     let codegen_info = surreal_type_generator::step_3_outputs::query_to_return_type(query_str, schema_str)?;
 
 //     assert_eq_sorted!(
 //         codegen_info,

@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use type_generator::QueryResult;
+use surreal_type_generator::QueryResult;
 
 #[test]
 fn can_interpret_object() -> Result<(), anyhow::Error> {
@@ -18,23 +18,23 @@ RETURN {
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
-        vec![type_generator::ValueType::Object(
+        vec![surreal_type_generator::ValueType::Object(
             [
                 (
                     "foo".to_string(),
-                    type_generator::ValueType::Object(
+                    surreal_type_generator::ValueType::Object(
                         [
-                            ("bar".to_string(), type_generator::ValueType::Number),
-                            ("baz".to_string(), type_generator::ValueType::Number),
+                            ("bar".to_string(), surreal_type_generator::ValueType::Number),
+                            ("baz".to_string(), surreal_type_generator::ValueType::Number),
                         ]
                         .into()
                     ),
                 ),
-                ("qux".to_string(), type_generator::ValueType::Number),
+                ("qux".to_string(), surreal_type_generator::ValueType::Number),
             ]
             .into()
         )]

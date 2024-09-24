@@ -1,5 +1,5 @@
 use pretty_assertions_sorted;
-use type_generator::QueryResult;
+use surreal_type_generator::QueryResult;
 
 #[test]
 fn custom_function_return_types() -> anyhow::Result<()> {
@@ -13,11 +13,11 @@ RETURN fn::foo(9);
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     pretty_assertions_sorted::assert_eq_sorted!(
         return_types,
-        vec![type_generator::ValueType::Number]
+        vec![surreal_type_generator::ValueType::Number]
     );
 
     Ok(())

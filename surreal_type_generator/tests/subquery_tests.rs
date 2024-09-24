@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{QueryResult, ValueType};
 
 #[test]
 fn query_with_subquery() -> anyhow::Result<()> {
@@ -17,7 +17,7 @@ DEFINE FIELD name ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,

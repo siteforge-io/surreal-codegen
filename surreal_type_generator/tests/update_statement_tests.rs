@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{QueryResult, ValueType};
 
 #[test]
 fn update_statement_with_set_field() -> anyhow::Result<()> {
@@ -12,7 +12,7 @@ DEFINE FIELD name ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -40,23 +40,21 @@ DEFINE FIELD name ON user TYPE string;
 DEFINE FIELD baz ON user TYPE string;
 "#;
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Either(
-            vec![
-                ValueType::Object(
-                    [
-                        ("id".into(), ValueType::Record(vec!["user".into()])),
-                        ("name".into(), ValueType::String),
-                        ("baz".into(), ValueType::String),
-                    ]
-                    .into()
-                ),
-                ValueType::Null,
-            ]
-        )))]
+        vec![ValueType::Array(Box::new(ValueType::Either(vec![
+            ValueType::Object(
+                [
+                    ("id".into(), ValueType::Record(vec!["user".into()])),
+                    ("name".into(), ValueType::String),
+                    ("baz".into(), ValueType::String),
+                ]
+                .into()
+            ),
+            ValueType::Null,
+        ])))]
     );
 
     Ok(())
@@ -75,7 +73,7 @@ DEFINE FIELD baz ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -105,7 +103,7 @@ DEFINE FIELD baz ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -128,7 +126,7 @@ DEFINE FIELD baz ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -151,7 +149,7 @@ DEFINE FIELD baz ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,

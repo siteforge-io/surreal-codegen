@@ -44,16 +44,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'type_generator'",
+            "name": "Debug unit tests in library 'surreal_type_generator'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
-                    "name": "type_generator",
+                    "name": "surreal_type_generator",
                     "kind": "lib"
                 }
             },
@@ -69,7 +69,7 @@
                     "test",
                     "--no-run",
                     "--test=return_and_expressions",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "return_and_expressions",
@@ -88,7 +88,7 @@
                     "test",
                     "--no-run",
                     "--test=subquery_tests",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "subquery_tests",
@@ -107,7 +107,7 @@
                     "test",
                     "--no-run",
                     "--test=object",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "object",
@@ -126,7 +126,7 @@
                     "test",
                     "--no-run",
                     "--test=casting_javascript",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "casting_javascript",
@@ -145,7 +145,7 @@
                     "test",
                     "--no-run",
                     "--test=update_statement_tests",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "update_statement_tests",
@@ -164,7 +164,7 @@
                     "test",
                     "--no-run",
                     "--test=insert_statement_tests",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "insert_statement_tests",
@@ -183,7 +183,7 @@
                     "test",
                     "--no-run",
                     "--test=functions",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "functions",
@@ -202,7 +202,7 @@
                     "test",
                     "--no-run",
                     "--test=precomputed_views",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "precomputed_views",
@@ -221,7 +221,7 @@
                     "test",
                     "--no-run",
                     "--test=variable_usage_tests",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "variable_usage_tests",
@@ -240,7 +240,7 @@
                     "test",
                     "--no-run",
                     "--test=constant_expression_tests",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "constant_expression_tests",
@@ -259,7 +259,7 @@
                     "test",
                     "--no-run",
                     "--test=select_grouping",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "select_grouping",
@@ -278,7 +278,7 @@
                     "test",
                     "--no-run",
                     "--test=select_statements_tests",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "select_statements_tests",
@@ -297,7 +297,7 @@
                     "test",
                     "--no-run",
                     "--test=typescript_generation",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "typescript_generation",
@@ -316,7 +316,7 @@
                     "test",
                     "--no-run",
                     "--test=create_statement_tests",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "create_statement_tests",
@@ -335,7 +335,7 @@
                     "test",
                     "--no-run",
                     "--test=delete_statement_tests",
-                    "--package=type_generator"
+                    "--package=surreal_type_generator"
                 ],
                 "filter": {
                     "name": "delete_statement_tests",

@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{QueryResult, ValueType};
 
 #[test]
 fn query_with_simple_delete() -> anyhow::Result<()> {
@@ -11,7 +11,7 @@ DEFINE TABLE user SCHEMAFULL;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -31,7 +31,7 @@ DEFINE TABLE user SCHEMAFULL;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(return_types, vec![ValueType::Never]);
 
@@ -48,7 +48,7 @@ DEFINE TABLE user SCHEMAFULL;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -69,16 +69,13 @@ DEFINE FIELD name ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
         vec![ValueType::Array(Box::new(ValueType::Object(
             [
-                (
-                    "id".into(),
-                    ValueType::Record(vec!["user".into()]).into()
-                ),
+                ("id".into(), ValueType::Record(vec!["user".into()]).into()),
                 ("name".into(), ValueType::String.into()),
             ]
             .into()
@@ -99,7 +96,7 @@ DEFINE FIELD name ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,

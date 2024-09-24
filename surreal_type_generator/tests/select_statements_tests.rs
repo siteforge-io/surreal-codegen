@@ -1,6 +1,6 @@
 use pretty_assertions_sorted::assert_eq_sorted;
+use surreal_type_generator::{QueryResult, ValueType};
 use surrealdb::sql::Table;
-use type_generator::{QueryResult, ValueType};
 
 #[test]
 fn query_specific_value() -> anyhow::Result<()> {
@@ -13,7 +13,7 @@ DEFINE FIELD name ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -51,7 +51,7 @@ DEFINE FIELD number ON user TYPE number;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -86,7 +86,7 @@ DEFINE FIELD name ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -114,7 +114,7 @@ DEFINE FIELD name ON user TYPE string;
         return_types,
         variables,
         ..
-    } = type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+    } = surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         variables,
@@ -154,7 +154,7 @@ DEFINE FIELD user ON xyz TYPE record<user>;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -195,7 +195,7 @@ DEFINE FIELD name ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -223,7 +223,7 @@ DEFINE FIELD name ON org TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -246,7 +246,7 @@ DEFINE FIELD name ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -292,7 +292,7 @@ DEFINE FIELD abc2 ON xyz TYPE option<string>;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -361,7 +361,7 @@ DEFINE FIELD tags ON post TYPE array<string>;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -391,7 +391,7 @@ DEFINE FIELD tags ON post TYPE array<string>;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -421,7 +421,7 @@ DEFINE FIELD name ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -447,7 +447,7 @@ DEFINE FIELD xyz ON user TYPE object;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -477,7 +477,7 @@ DEFINE FIELD num ON xyz TYPE int;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -518,7 +518,7 @@ DEFINE FIELD xyz.abc ON user TYPE option<string>;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -561,7 +561,7 @@ DEFINE FIELD xyz.num ON user TYPE int;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -598,7 +598,7 @@ DEFINE FIELD baz ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -624,7 +624,7 @@ DEFINE FIELD foo ON user TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
-        type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
     assert_eq_sorted!(
         return_types,
@@ -655,7 +655,7 @@ DEFINE FIELD foo ON user TYPE string;
 // "#;
 
 //     let QueryResult { return_types, .. } =
-//         type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+//         surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
 //     assert_eq_sorted!(
 //         return_types,

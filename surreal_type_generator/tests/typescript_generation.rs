@@ -15,7 +15,7 @@
 // "#
 //     .trim();
 //     let output =
-//         type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
+//         surreal_type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
 //             .types;
 
 //     assert_eq_sorted!(output, expected_str);
@@ -39,7 +39,7 @@
 // "#
 //     .trim();
 //     let output =
-//         type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
+//         surreal_type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
 //             .types;
 
 //     assert_eq_sorted!(output, expected_str);
@@ -64,7 +64,7 @@
 // "#
 //     .trim();
 //     let output =
-//         type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
+//         surreal_type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
 //             .types;
 
 //     assert_eq_sorted!(output, expected_str);
@@ -97,7 +97,7 @@
 // "#
 //     .trim();
 //     let output =
-//         type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
+//         surreal_type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
 //             .types;
 
 //     assert_eq_sorted!(output, expected_str);
@@ -132,7 +132,7 @@
 // export type XQueryResult = [{age:number,bool:boolean,datetime:Date,decimal:Decimal,duration:Duration,name:string,}[],]
 // "#.trim();
 //     let output =
-//         type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
+//         surreal_type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
 //             .types;
 
 //     assert_eq_sorted!(output, expected_str);
@@ -157,7 +157,7 @@
 // "#
 //     .trim();
 //     let output =
-//         type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
+//         surreal_type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
 //             .types;
 
 //     assert_eq_sorted!(output, expected_str);
@@ -183,7 +183,7 @@
 // "#
 //     .trim();
 //     let output =
-//         type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
+//         surreal_type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
 //             .types;
 
 //     assert_eq_sorted!(output, expected_str);
@@ -217,7 +217,7 @@
 // export type XQueryResult = [{age:number|null,bool:boolean|null,name:string|null,xyz:{abc:string|null,}|null,}[],]
 // "#.trim();
 //     let output =
-//         type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
+//         surreal_type_generator::step_3_outputs::generate_typescript_file("x.surql", query_str, schema_str)?
 //             .types;
 
 //     assert_eq_sorted!(output, expected_str);

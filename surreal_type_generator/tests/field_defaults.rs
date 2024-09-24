@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{QueryResult, ValueType};
 
 #[test]
 fn field_defaults() -> anyhow::Result<()> {
@@ -8,12 +8,13 @@ DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD created_at ON user TYPE datetime VALUE time::now() READONLY;
 "#;
 
-    let QueryResult { return_types, .. } = type_generator::step_3_codegen::query_to_return_type(
-        r#"
+    let QueryResult { return_types, .. } =
+        surreal_type_generator::step_3_codegen::query_to_return_type(
+            r#"
 CREATE user;
 "#,
-        schema,
-    )?;
+            schema,
+        )?;
 
     assert_eq_sorted!(
         return_types,
