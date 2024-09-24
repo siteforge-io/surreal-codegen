@@ -278,8 +278,8 @@ You can also define global parameters in a `global.surql` file, which will be av
 - [ ] `CONTINUE`
 - [ ] `BREAK`
 - [x] `RETURN`
-- [ ] `BEGIN`
-- [ ] `COMMIT`
+- [X] `BEGIN`
+- [X] `COMMIT`
 - [ ] `LET`
 - [ ] `ABORT`
 - [ ] `THROW`
