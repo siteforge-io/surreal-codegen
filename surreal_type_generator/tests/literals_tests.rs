@@ -64,7 +64,7 @@ fn literal_values_in_query() {
 DEFINE TABLE baz SCHEMAFULL;
 "#;
     let query = r#"
-SELECT [] as foo FROM baz;
+SELECT [] as foo, [1, 2, 3] as num_list FROM baz;
 "#;
 
     let QueryResult { return_types, .. } =
@@ -73,7 +73,14 @@ SELECT [] as foo FROM baz;
     pretty_assertions_sorted::assert_eq_sorted!(
         return_types,
         vec![ValueType::Array(Box::new(ValueType::Object(
-            [("foo".into(), ValueType::Array(Box::new(ValueType::Never)))].into()
+            [
+                ("foo".into(), ValueType::Array(Box::new(ValueType::Never))),
+                (
+                    "num_list".into(),
+                    ValueType::Array(Box::new(ValueType::Number))
+                ),
+            ]
+            .into()
         )))]
     );
 }

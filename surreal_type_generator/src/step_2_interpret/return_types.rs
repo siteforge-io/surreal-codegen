@@ -155,13 +155,11 @@ pub fn get_value_return_type(
                 return_types.insert(get_value_return_type(value, field_types, state)?);
             }
             // If there is more than one type, we muse use Either
-            if return_types.len() > 1 {
-                return Ok(ValueType::Either(return_types.into_iter().collect()));
-            } else if return_types.len() == 1 {
-                return Ok(return_types.into_iter().next().unwrap());
-            } else {
-                return Ok(ValueType::Array(Box::new(ValueType::Never)));
-            }
+            ValueType::Array(Box::new(match return_types.len() {
+                0 => ValueType::Never,
+                1 => return_types.into_iter().next().unwrap(),
+                _ => ValueType::Either(return_types.into_iter().collect()),
+            }))
         }
         Value::Object(obj) => get_object_return_type(state, obj)?,
         Value::Constant(constant) => match constant {

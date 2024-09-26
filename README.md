@@ -239,7 +239,7 @@ You can also define global parameters in a `global.surql` file, which will be av
 - [x] `"string"`
 - [x] `123`
 - [x] `123.456`
-- [ ] `[1, 2, 3]`
+- [x] `[1, 2, 3]`
 - [x] `{"foo": "bar"}`
 
 #### Comparison expressions
