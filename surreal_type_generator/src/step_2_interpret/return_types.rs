@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use surrealdb::sql::{
     Cast, Constant, Expression, Field, Fields, Ident, Idiom, Operator, Param, Part, Value,
@@ -149,7 +149,20 @@ pub fn get_value_return_type(
         Value::None => ValueType::Null,
         Value::Function(func) => get_function_return_type(state, &func)?,
         Value::Expression(expr) => get_expression_return_type(expr, field_types, state)?,
-        Value::Array(_) => anyhow::bail!("Arrays are not yet supported"),
+        Value::Array(array) => {
+            let mut return_types = BTreeSet::new();
+            for value in &array.0 {
+                return_types.insert(get_value_return_type(value, field_types, state)?);
+            }
+            // If there is more than one type, we muse use Either
+            if return_types.len() > 1 {
+                return Ok(ValueType::Either(return_types.into_iter().collect()));
+            } else if return_types.len() == 1 {
+                return Ok(return_types.into_iter().next().unwrap());
+            } else {
+                return Ok(ValueType::Array(Box::new(ValueType::Never)));
+            }
+        }
         Value::Object(obj) => get_object_return_type(state, obj)?,
         Value::Constant(constant) => match constant {
             Constant::MathE

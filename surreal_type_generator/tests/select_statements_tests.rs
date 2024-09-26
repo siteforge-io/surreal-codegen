@@ -381,13 +381,16 @@ DEFINE FIELD tags ON post TYPE array<string>;
 fn query_with_array_field() -> anyhow::Result<()> {
     let query = r#"
 SELECT
-    tags
+    tags,
+    xyz_list as xyzs
 FROM
     post;
 "#;
     let schema = r#"
+DEFINE TABLE xyz SCHEMAFULL;
 DEFINE TABLE post SCHEMAFULL;
 DEFINE FIELD tags ON post TYPE array<string>;
+DEFINE FIELD xyz_list ON post TYPE array<record<xyz>> DEFAULT [];
 "#;
 
     let QueryResult { return_types, .. } =
@@ -396,10 +399,16 @@ DEFINE FIELD tags ON post TYPE array<string>;
     assert_eq_sorted!(
         return_types,
         vec![ValueType::Array(Box::new(ValueType::Object(
-            [(
-                "tags".into(),
-                ValueType::Array(Box::new(ValueType::String.into()))
-            ),]
+            [
+                (
+                    "tags".into(),
+                    ValueType::Array(Box::new(ValueType::String.into()))
+                ),
+                (
+                    "xyzs".into(),
+                    ValueType::Array(Box::new(ValueType::Record(vec![Table::from("xyz")])))
+                )
+            ]
             .into()
         ))),]
     );

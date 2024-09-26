@@ -144,6 +144,7 @@ You can also define global parameters in a `global.surql` file, which will be av
 - [x] `any`
 - [x] `foo | bar` Unions (mixed return type unions)
 - [x] Surreal 2.0 typed literals (eg: `"foo"`, `123`, `1d`, `{ foo: 123 }`, `array<1|2>`)
+- [ ] GEOJson types (eg: `point`, `line`, `polygon`)
 
 ## Objects
 - [x] `RETURN { foo: 1, bar: 2 }`

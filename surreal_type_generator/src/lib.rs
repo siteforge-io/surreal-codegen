@@ -9,7 +9,7 @@ pub mod step_3_codegen;
 
 pub use step_3_codegen::QueryResult;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, PartialOrd, Eq, Ord)]
 pub enum ValueType {
     Any,
     Never,

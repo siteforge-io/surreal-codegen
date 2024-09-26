@@ -57,3 +57,23 @@ CREATE ONLY baz CONTENT {
 
     Ok(())
 }
+
+#[test]
+fn literal_values_in_query() {
+    let schema = r#"
+DEFINE TABLE baz SCHEMAFULL;
+"#;
+    let query = r#"
+SELECT [] as foo FROM baz;
+"#;
+
+    let QueryResult { return_types, .. } =
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema).unwrap();
+
+    pretty_assertions_sorted::assert_eq_sorted!(
+        return_types,
+        vec![ValueType::Array(Box::new(ValueType::Object(
+            [("foo".into(), ValueType::Array(Box::new(ValueType::Never)))].into()
+        )))]
+    );
+}
