@@ -37,6 +37,7 @@ Options:
 `./schema.surql`
 ```ts
 DEFINE TABLE user SCHEMAFULL;
+DEFINE FIELD id ON user TYPE string;
 DEFINE FIELD email ON user TYPE string
   VALUE string::lowercase($value)
   ASSERT string::is::email($value);
@@ -145,6 +146,7 @@ You can also define global parameters in a `global.surql` file, which will be av
 - [x] `foo | bar` Unions (mixed return type unions)
 - [x] Surreal 2.0 typed literals (eg: `"foo"`, `123`, `1d`, `{ foo: 123 }`, `array<1|2>`)
 - [ ] GEOJson types (eg: `point`, `line`, `polygon`)
+- [x] Typed `id` record ID values for tables, eg: `DEFINE FIELD id ON user TYPE string`
 
 ## Objects
 - [x] `RETURN { foo: 1, bar: 2 }`

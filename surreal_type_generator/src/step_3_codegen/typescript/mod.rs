@@ -1,14 +1,36 @@
 use std::{collections::BTreeMap, sync::Arc};
 
-use surrealdb::sql::Statements;
+use surrealdb::sql::{Statements, Table};
 
 use crate::{step_2_interpret::SchemaState, ValueType};
 
 pub struct TypeData {
+    pub schema: Arc<SchemaState>,
     pub name: String,
     pub statements: Statements,
     pub return_type: Vec<ValueType>,
     pub variables: BTreeMap<String, ValueType>,
+}
+
+pub fn generate_type_info(
+    file_name: &str,
+    query: &str,
+    state: Arc<SchemaState>,
+) -> Result<TypeData, anyhow::Error> {
+    let result = crate::step_3_codegen::output_query_type(query, state.clone())?;
+    let camel_case_file_name = filename_to_camel_case(file_name)?;
+
+    Ok(TypeData {
+        schema: state.clone(),
+        name: camel_case_file_name,
+        return_type: result.return_types,
+        statements: {
+            let mut s = Statements::default();
+            s.0 = result.statements;
+            s
+        },
+        variables: result.variables,
+    })
 }
 
 pub fn generate_typescript_output(
@@ -21,6 +43,7 @@ pub fn generate_typescript_output(
     output.push_str("\n");
 
     for TypeData {
+        schema,
         name,
         statements,
         return_type,
@@ -35,7 +58,7 @@ pub fn generate_typescript_output(
         output.push_str(&format!("export type {}Result = [{}]\n", name, {
             let mut output = String::new();
             for return_type in return_type {
-                output.push_str(&generate_type_definition(return_type)?);
+                output.push_str(&generate_type_definition(return_type, schema)?);
                 output.push_str(",");
             }
             output
@@ -44,9 +67,10 @@ pub fn generate_typescript_output(
         if variables.len() > 0 {
             output.push_str(&format!("export type {}Variables = ", name));
 
-            output.push_str(&generate_type_definition(&ValueType::Object(
-                variables.clone(),
-            ))?);
+            output.push_str(&generate_type_definition(
+                &ValueType::Object(variables.clone()),
+                schema,
+            )?);
 
             output.push_str("\n");
         }
@@ -87,27 +111,15 @@ export class TypedSurreal extends Surreal {
     Ok(output)
 }
 
-pub fn generate_type_info(
-    file_name: &str,
-    query: &str,
-    state: Arc<SchemaState>,
-) -> Result<TypeData, anyhow::Error> {
-    let result = crate::step_3_codegen::output_query_type(query, state)?;
-    let camel_case_file_name = filename_to_camel_case(file_name)?;
-
-    Ok(TypeData {
-        name: camel_case_file_name,
-        return_type: result.return_types,
-        statements: {
-            let mut s = Statements::default();
-            s.0 = result.statements;
-            s
-        },
-        variables: result.variables,
-    })
+fn get_table_id_type(table: &Table, schema: &SchemaState) -> Result<String, anyhow::Error> {
+    let table_parsed = schema.schema.tables.get(table.0.as_str()).unwrap();
+    generate_type_definition(&table_parsed.id_value_type, schema)
 }
 
-fn generate_type_definition(return_type: &ValueType) -> Result<String, anyhow::Error> {
+fn generate_type_definition(
+    return_type: &ValueType,
+    schema: &SchemaState,
+) -> Result<String, anyhow::Error> {
     match return_type {
         ValueType::Any => Ok("any".to_string()),
         ValueType::Number => Ok("number".to_string()),
@@ -139,8 +151,8 @@ fn generate_type_definition(return_type: &ValueType) -> Result<String, anyhow::E
                         _ => "",
                     },
                     match value {
-                        ValueType::Option(inner) => generate_type_definition(inner)?,
-                        value => generate_type_definition(value)?,
+                        ValueType::Option(inner) => generate_type_definition(inner, schema)?,
+                        value => generate_type_definition(value, schema)?,
                     },
                 ));
             }
@@ -149,7 +161,7 @@ fn generate_type_definition(return_type: &ValueType) -> Result<String, anyhow::E
             Ok(output)
         }
         ValueType::Array(array) => {
-            let string = generate_type_definition(&**array)?;
+            let string = generate_type_definition(&**array, schema)?;
             Ok(format!("Array<{}>", string))
         }
         ValueType::Either(vec) => {
@@ -158,7 +170,7 @@ fn generate_type_definition(return_type: &ValueType) -> Result<String, anyhow::E
 
             for return_type in vec.into_iter() {
                 output.push_str("|");
-                output.push_str(&generate_type_definition(return_type)?);
+                output.push_str(&generate_type_definition(return_type, schema)?);
             }
 
             output.push_str(")");
@@ -166,18 +178,23 @@ fn generate_type_definition(return_type: &ValueType) -> Result<String, anyhow::E
         }
         ValueType::Record(tables) => {
             let mut output = String::new();
-            output.push_str("RecordId<");
+            output.push_str("(RecordId<");
 
-            for table in tables.iter() {
-                output.push_str(&format!(" |'{}'", table.0));
-            }
+            let table_idents = tables
+                .iter()
+                .map(|table| format!("\"{}\"", table.0))
+                .collect::<Vec<_>>();
+            let tables_joined = table_idents.join(" | ");
 
-            output.push_str(">");
+            output.push_str(&tables_joined);
+
+            output.push_str("> & { id: ");
+            output.push_str(&get_table_id_type(tables.first().unwrap(), schema)?);
+            output.push_str(" })");
             Ok(output)
         }
-        // ValueType::Option(..) => anyhow::bail!("Option types should never be generated"),
         ValueType::Option(optional_value) => {
-            let string = generate_type_definition(&**optional_value)?;
+            let string = generate_type_definition(&**optional_value, schema)?;
             Ok(format!("{} | undefined", string))
         }
 

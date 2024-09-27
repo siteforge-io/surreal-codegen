@@ -44,6 +44,7 @@ pub enum FieldType {
 #[derive(Debug, PartialEq)]
 pub struct TableParsed {
     pub name: String,
+    pub id_value_type: ValueType,
     pub fields: BTreeMap<String, FieldParsed>,
 }
 
@@ -166,6 +167,7 @@ fn parse_table(
     table: &DefineTableStatement,
     field_definitions: &Vec<(Idiom, DefineFieldStatement)>,
 ) -> anyhow::Result<TableParsed> {
+    // insert the implicit id field
     let mut fields = BTreeMap::from([(
         "id".into(),
         FieldParsed {
@@ -225,8 +227,20 @@ fn parse_table(
         insert_into_object(&idiom, &mut fields, to_insert)?;
     }
 
+    // Handle edge case where DEFINE FIELD id ON foo TYPE string is used
+    // Since, the return type is still a record<foo> we need to note that.
+    let id_value_type = match &mut fields.get_mut("id").unwrap().return_type {
+        ValueType::Record(..) => ValueType::String,
+        val => {
+            let id_value_type = val.clone();
+            *val = ValueType::Record(vec![table.name.clone().into()]);
+            id_value_type
+        }
+    };
+
     return Ok(TableParsed {
         name: table.name.to_string(),
+        id_value_type,
         fields,
     });
 }
