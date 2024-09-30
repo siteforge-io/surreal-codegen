@@ -1,23 +1,23 @@
 use surrealdb::sql::{statements::UpsertStatement, Data, Fields, Output, Value, Values};
 
 use crate::{
+    kind,
     step_2_interpret::{get_statement_fields, schema::QueryState},
-    ValueType,
+    Kind,
 };
 
 pub fn get_upsert_statement_return_type(
     upsert: &UpsertStatement,
     state: &mut QueryState,
-) -> Result<ValueType, anyhow::Error> {
+) -> Result<Kind, anyhow::Error> {
     let is_only = upsert.only;
 
     let return_type = match &upsert.output {
         Some(Output::After) | None => get_upsert_fields(upsert, state, None)?,
-        Some(Output::Before) => ValueType::Either(vec![
-            ValueType::Null,
-            get_upsert_fields(upsert, state, None)?,
-        ]),
-        Some(Output::None) => ValueType::Never,
+        Some(Output::Before) => {
+            Kind::Either(vec![Kind::Null, get_upsert_fields(upsert, state, None)?])
+        }
+        Some(Output::None) => Kind::Null,
         Some(Output::Diff) => Err(anyhow::anyhow!("Create with returned diff not supported"))?,
         Some(Output::Fields(fields)) => get_upsert_fields(upsert, state, Some(fields))?,
         #[allow(unreachable_patterns)]
@@ -35,7 +35,7 @@ pub fn get_upsert_statement_return_type(
     if is_only {
         Ok(return_type)
     } else {
-        Ok(ValueType::Array(Box::new(return_type)))
+        Ok(kind!(Arr return_type))
     }
 }
 
@@ -56,14 +56,9 @@ pub fn validate_data_type(
                 };
                 match state.schema.schema.tables.get(table_name) {
                     Some(table) => {
-                        let create_fields = ValueType::Object(table.compute_create_fields());
-                        tables.push(ValueType::Either(
-                            [
-                                ValueType::Array(Box::new(create_fields.clone())),
-                                create_fields,
-                            ]
-                            .into(),
-                        ));
+                        let create_fields = kind!(Obj table.compute_create_fields());
+                        tables
+                            .push(kind!(Either [create_fields.clone(), kind!(Arr create_fields)]));
                     }
                     None => anyhow::bail!(
                         "Tried to create a record with an unknown or view table: {}",
@@ -75,7 +70,7 @@ pub fn validate_data_type(
             if tables.len() == 1 {
                 state.infer(param.0.as_str(), tables.pop().unwrap());
             } else if tables.len() > 1 {
-                state.infer(&param.0.as_str(), ValueType::Either(tables));
+                state.infer(&param.0.as_str(), Kind::Either(tables));
             }
 
             Ok(())
@@ -89,10 +84,10 @@ fn get_upsert_fields(
     upsert: &UpsertStatement,
     state: &mut QueryState,
     fields: Option<&Fields>,
-) -> Result<ValueType, anyhow::Error> {
+) -> Result<Kind, anyhow::Error> {
     get_statement_fields(&upsert.what, state, fields, |fields, state| {
-        state.set_local("after", ValueType::Object(fields.clone()));
-        state.set_local("before", ValueType::Object(fields.clone()));
-        state.set_local("this", ValueType::Object(fields.clone()));
+        state.set_local("after", kind!(Obj fields.clone()));
+        state.set_local("before", kind!(Obj fields.clone()));
+        state.set_local("this", kind!(Obj fields.clone()));
     })
 }

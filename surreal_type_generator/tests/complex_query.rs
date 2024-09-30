@@ -1,7 +1,7 @@
 // use std::collections::HashMap;
 
 // use pretty_assertions_sorted::assert_eq_sorted;
-// use surreal_type_generator::{QueryResult, ValueType};
+// use surreal_type_generator::{QueryResult, Kind};
 
 // #[test]
 // fn test_complex_query() -> anyhow::Result<()> {
@@ -76,11 +76,11 @@
 
 //     assert_eq_sorted!(
 //         return_types,
-//         vec![ValueType::Object(HashMap::from([(
+//         vec![Kind::Object(HashMap::from([(
 //             "previous".to_string(),
-//             ValueType::Object(HashMap::from([(
+//             Kind::Object(HashMap::from([(
 //                 "last_updated".to_string(),
-//                 ValueType::Datetime
+//                 Kind::Datetime
 //             ),]))
 //         ),]))]
 //     );
@@ -121,11 +121,11 @@
 
 //     assert_eq_sorted!(
 //         return_types,
-//         vec![ValueType::Object(HashMap::from([(
+//         vec![Kind::Object(HashMap::from([(
 //             "previous".to_string(),
-//             ValueType::Object(HashMap::from([(
+//             Kind::Object(HashMap::from([(
 //                 "last_updated".to_string(),
-//                 ValueType::Datetime
+//                 Kind::Datetime
 //             ),]))
 //         ),]))]
 //     );

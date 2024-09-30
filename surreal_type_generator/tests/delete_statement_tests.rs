@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use surreal_type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{kind, QueryResult};
 
 #[test]
 fn query_with_simple_delete() -> anyhow::Result<()> {
@@ -13,10 +13,7 @@ DEFINE TABLE user SCHEMAFULL;
     let QueryResult { return_types, .. } =
         surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    assert_eq_sorted!(
-        return_types,
-        vec![ValueType::Array(Box::new(ValueType::Never))]
-    );
+    assert_eq_sorted!(return_types, vec![kind!([kind!(Null)])]);
 
     Ok(())
 }
@@ -33,7 +30,7 @@ DEFINE TABLE user SCHEMAFULL;
     let QueryResult { return_types, .. } =
         surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    assert_eq_sorted!(return_types, vec![ValueType::Never]);
+    assert_eq_sorted!(return_types, vec![kind!(Null)]);
 
     Ok(())
 }
@@ -50,10 +47,7 @@ DEFINE TABLE user SCHEMAFULL;
     let QueryResult { return_types, .. } =
         surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    assert_eq_sorted!(
-        return_types,
-        vec![ValueType::Array(Box::new(ValueType::Null))]
-    );
+    assert_eq_sorted!(return_types, vec![kind!([kind!(Null)])]);
 
     Ok(())
 }
@@ -73,13 +67,10 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("id".into(), ValueType::Record(vec!["user".into()]).into()),
-                ("name".into(), ValueType::String.into()),
-            ]
-            .into()
-        ))),]
+        vec![kind!([kind!({
+            "id": kind!(Record ["user"]),
+            "name": kind!(String)
+        })])]
     );
 
     Ok(())
@@ -100,9 +91,9 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [("name".to_string(), ValueType::Null)].into()
-        )))]
+        vec![kind!([kind!({
+            "name": kind!(Null)
+        })])]
     );
 
     Ok(())

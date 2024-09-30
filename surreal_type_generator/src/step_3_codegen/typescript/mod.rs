@@ -1,15 +1,15 @@
+use crate::{kind, Kind};
 use std::{collections::BTreeMap, sync::Arc};
+use surrealdb::sql::{Literal, Statements, Table};
 
-use surrealdb::sql::{Statements, Table};
-
-use crate::{step_2_interpret::SchemaState, ValueType};
+use crate::step_2_interpret::SchemaState;
 
 pub struct TypeData {
     pub schema: Arc<SchemaState>,
     pub name: String,
     pub statements: Statements,
-    pub return_type: Vec<ValueType>,
-    pub variables: BTreeMap<String, ValueType>,
+    pub return_type: Vec<Kind>,
+    pub variables: BTreeMap<String, Kind>,
 }
 
 pub fn generate_type_info(
@@ -68,7 +68,7 @@ pub fn generate_typescript_output(
             output.push_str(&format!("export type {}Variables = ", name));
 
             output.push_str(&generate_type_definition(
-                &ValueType::Object(variables.clone()),
+                &kind!(Obj variables.clone()),
                 schema,
             )?);
 
@@ -117,54 +117,26 @@ fn get_table_id_type(table: &Table, schema: &SchemaState) -> Result<String, anyh
 }
 
 fn generate_type_definition(
-    return_type: &ValueType,
+    return_type: &Kind,
     schema: &SchemaState,
 ) -> Result<String, anyhow::Error> {
     match return_type {
-        ValueType::Any => Ok("any".to_string()),
-        ValueType::Number => Ok("number".to_string()),
-        ValueType::Never => Ok("never".to_string()),
-        ValueType::Null => Ok("null".to_string()),
-        ValueType::Unknown => Ok("unknown".to_string()),
-        ValueType::String => Ok("string".to_string()),
-        ValueType::Int => Ok("number".to_string()),
-        ValueType::Float => Ok("number".to_string()),
-        ValueType::Datetime => Ok("Date".to_string()),
-        ValueType::Duration => Ok("Duration".to_string()),
-        ValueType::Decimal => Ok("Decimal".to_string()),
-        ValueType::Bool => Ok("boolean".to_string()),
-        ValueType::Uuid => Ok("string".to_string()),
-        ValueType::Object(map) => {
-            let mut output = String::new();
-            output.push_str("{");
-
-            // sort alphabetically for deterministic output
-            let mut map: Vec<(_, _)> = map.into_iter().collect();
-            map.sort_by_key(|x| x.0.to_string());
-
-            for (key, value) in map {
-                output.push_str(&format!(
-                    "{}{}:{},",
-                    key,
-                    match value {
-                        ValueType::Option(_) => "?",
-                        _ => "",
-                    },
-                    match value {
-                        ValueType::Option(inner) => generate_type_definition(inner, schema)?,
-                        value => generate_type_definition(value, schema)?,
-                    },
-                ));
-            }
-
-            output.push_str("}");
-            Ok(output)
-        }
-        ValueType::Array(array) => {
+        Kind::Any => Ok("any".to_string()),
+        Kind::Number => Ok("number".to_string()),
+        Kind::Null => Ok("null".to_string()),
+        Kind::String => Ok("string".to_string()),
+        Kind::Int => Ok("number".to_string()),
+        Kind::Float => Ok("number".to_string()),
+        Kind::Datetime => Ok("Date".to_string()),
+        Kind::Duration => Ok("Duration".to_string()),
+        Kind::Decimal => Ok("Decimal".to_string()),
+        Kind::Bool => Ok("boolean".to_string()),
+        Kind::Uuid => Ok("string".to_string()),
+        Kind::Array(array, ..) => {
             let string = generate_type_definition(&**array, schema)?;
             Ok(format!("Array<{}>", string))
         }
-        ValueType::Either(vec) => {
+        Kind::Either(vec) => {
             let mut output = String::new();
             output.push_str("(");
 
@@ -176,7 +148,7 @@ fn generate_type_definition(
             output.push_str(")");
             Ok(output)
         }
-        ValueType::Record(tables) => {
+        Kind::Record(tables) => {
             let mut output = String::new();
             output.push_str("(RecordId<");
 
@@ -193,17 +165,52 @@ fn generate_type_definition(
             output.push_str(" })");
             Ok(output)
         }
-        ValueType::Option(optional_value) => {
+        Kind::Option(optional_value) => {
             let string = generate_type_definition(&**optional_value, schema)?;
             Ok(format!("{} | undefined", string))
         }
+        Kind::Object => Ok("any".to_string()),
 
         // ========
         // Literals
         // ========
-        ValueType::StringLiteral(string) => Ok(serde_json::to_string(&string)?),
-        ValueType::DurationLiteral(_duration) => Ok("Duration".to_string()),
-        ValueType::NumberLiteral(number) => Ok(number.to_string()),
+        Kind::Literal(Literal::String(string)) => Ok(serde_json::to_string(&string)?),
+        Kind::Literal(Literal::Duration(_duration)) => Ok("Duration".to_string()),
+        Kind::Literal(Literal::Number(number)) => Ok(number.to_string()),
+        Kind::Literal(Literal::Object(map)) => {
+            let mut output = String::new();
+            output.push_str("{");
+
+            // sort alphabetically for deterministic output
+            let mut map: Vec<(_, _)> = map.into_iter().collect();
+            map.sort_by_key(|x| x.0.to_string());
+
+            for (key, value) in map {
+                output.push_str(&format!(
+                    "{}{}:{},",
+                    key,
+                    match value {
+                        Kind::Option(_) => "?",
+                        _ => "",
+                    },
+                    match value {
+                        Kind::Option(inner) => generate_type_definition(inner, schema)?,
+                        value => generate_type_definition(value, schema)?,
+                    },
+                ));
+            }
+
+            output.push_str("}");
+            Ok(output)
+        }
+        Kind::Literal(Literal::Array(array)) => {
+            todo!("Literal::Array not yet supported")
+            // let string = generate_type_definition(&**array, schema)?;
+            // Ok(format!("Array<{}>", string))
+        }
+
+        // Catch all
+        kind => unimplemented!("Kind {:?} not yet supported", kind),
     }
 }
 

@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use surreal_type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{kind, QueryResult};
 
 #[test]
 fn simple_upsert_statement() -> anyhow::Result<()> {
@@ -20,14 +20,11 @@ DEFINE FIELD age ON user TYPE number;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("id".into(), ValueType::Record(vec!["user".into()]).into()),
-                ("name".into(), ValueType::String.into()),
-                ("age".into(), ValueType::Number.into()),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            id: kind!(Record ["user"]),
+            name: kind!(String),
+            age: kind!(Number)
+        })])]
     );
 
     Ok(())

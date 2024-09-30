@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use surreal_type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{kind, QueryResult};
 
 #[test]
 fn update_statement_with_set_field() -> anyhow::Result<()> {
@@ -16,13 +16,10 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("id".into(), ValueType::Record(vec!["user".into()])),
-                ("name".into(), ValueType::String),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+                id: kind!(Record ["user"]),
+            name: kind!(String)
+        })])]
     );
 
     Ok(())
@@ -44,17 +41,14 @@ DEFINE FIELD baz ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Either(vec![
-            ValueType::Object(
-                [
-                    ("id".into(), ValueType::Record(vec!["user".into()])),
-                    ("name".into(), ValueType::String),
-                    ("baz".into(), ValueType::String),
-                ]
-                .into()
-            ),
-            ValueType::Null,
-        ])))]
+        vec![kind!([kind!(Either [
+            kind!({
+                id: kind!(Record ["user"]),
+                name: kind!(String),
+                baz: kind!(String)
+            }),
+            kind!(Null)
+        ])])]
     );
 
     Ok(())
@@ -77,14 +71,11 @@ DEFINE FIELD baz ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("id".into(), ValueType::Record(vec!["user".into()])),
-                ("name".into(), ValueType::String),
-                ("baz".into(), ValueType::String),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            id: kind!(Record ["user"]),
+            name: kind!(String),
+            baz: kind!(String)
+        })])]
     );
 
     Ok(())
@@ -105,10 +96,7 @@ DEFINE FIELD baz ON user TYPE string;
     let QueryResult { return_types, .. } =
         surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    assert_eq_sorted!(
-        return_types,
-        vec![ValueType::Array(Box::new(ValueType::Null))]
-    );
+    assert_eq_sorted!(return_types, vec![kind!([kind!(Null)])]);
 
     Ok(())
 }
@@ -128,10 +116,7 @@ DEFINE FIELD baz ON user TYPE string;
     let QueryResult { return_types, .. } =
         surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    assert_eq_sorted!(
-        return_types,
-        vec![ValueType::Array(Box::new(ValueType::Never))]
-    );
+    assert_eq_sorted!(return_types, vec![kind!([kind!(Null)])]);
 
     Ok(())
 }
@@ -153,9 +138,9 @@ DEFINE FIELD baz ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [("baz".to_string(), ValueType::String)].into()
-        )))]
+        vec![kind!([kind!({
+            baz: kind!(String),
+        })])]
     );
 
     Ok(())

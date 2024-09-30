@@ -17,7 +17,7 @@ RETURN fn::foo(9);
 
     pretty_assertions_sorted::assert_eq_sorted!(
         return_types,
-        vec![surreal_type_generator::ValueType::Number]
+        vec![surreal_type_generator::Kind::Number]
     );
 
     Ok(())

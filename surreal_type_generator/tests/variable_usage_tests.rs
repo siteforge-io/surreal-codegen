@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use surreal_type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{kind, QueryResult};
 
 #[test]
 fn query_with_variable() -> anyhow::Result<()> {
@@ -22,19 +22,12 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [(
-                "before".into(),
-                ValueType::Object(
-                    [
-                        ("id".into(), ValueType::Record(vec!["user".into()])),
-                        ("name".into(), ValueType::String)
-                    ]
-                    .into()
-                )
-            )]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            before: kind!({
+                id: kind!(Record ["user"]),
+                name: kind!(String)
+            })
+        })])]
     );
 
     Ok(())
@@ -65,13 +58,10 @@ DEFINE FIELD baz ON abc TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("alias".into(), ValueType::String),
-                ("baz".into(), ValueType::String),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            alias: kind!(String),
+            baz: kind!(String)
+        })])]
     );
 
     Ok(())
@@ -98,9 +88,9 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [("after".into(), ValueType::Null)].into()
-        )))]
+        vec![kind!([kind!({
+            after: kind!(Null)
+        })])]
     );
 
     Ok(())
@@ -130,13 +120,10 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("name".into(), ValueType::String),
-                ("alias".into(), ValueType::String),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            name: kind!(String),
+            alias: kind!(String)
+        })])]
     );
 
     Ok(())
@@ -166,13 +153,10 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("name".into(), ValueType::String),
-                ("alias".into(), ValueType::String),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            name: kind!(String),
+            alias: kind!(String)
+        })])]
     );
 
     Ok(())

@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use surreal_type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{kind, var_map, QueryResult};
 
 #[test]
 fn insert_single_record() -> anyhow::Result<()> {
@@ -17,38 +17,27 @@ DEFINE FIELD name ON user TYPE string;
         ..
     } = surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    let user_vars = ValueType::Object(
-        [
-            (
-                "id".to_string(),
-                ValueType::Option(Box::new(ValueType::Record(vec!["user".into()]))),
-            ),
-            ("name".to_string(), ValueType::String),
-        ]
-        .into(),
-    );
+    let user_vars = kind!({
+        id: kind!(Opt (kind!(Record ["user"]))),
+        name: kind!(String)
+    });
 
     assert_eq_sorted!(
         variables,
-        [(
-            "user".to_string(),
-            ValueType::Either(vec![
-                ValueType::Array(Box::new(user_vars.clone())),
-                user_vars.clone(),
+        var_map! {
+            user: kind!(Either [
+                kind!(Arr user_vars.clone()),
+                user_vars.clone()
             ])
-        )]
-        .into()
+        }
     );
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("id".into(), ValueType::Record(vec!["user".into()])),
-                ("name".into(), ValueType::String),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            id: kind!(Record ["user"]),
+            name: kind!(String)
+        })])]
     );
 
     Ok(())
@@ -69,13 +58,10 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("id".into(), ValueType::Record(vec!["user".into()])),
-                ("name".into(), ValueType::String),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            id: kind!(Record ["user"]),
+            name: kind!(String)
+        })])]
     );
 
     Ok(())

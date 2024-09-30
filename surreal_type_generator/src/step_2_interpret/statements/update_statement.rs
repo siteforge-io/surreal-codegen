@@ -1,26 +1,26 @@
-use surrealdb::sql::{statements::UpdateStatement, Data, Fields, Output, Value, Values};
+use surrealdb::sql::{statements::UpdateStatement, Data, Fields, Output, Values};
 
 use crate::{
+    kind,
     step_2_interpret::{get_statement_fields, schema::QueryState},
-    ValueType,
+    Kind,
 };
 
 pub fn get_update_statement_return_type(
     update: &UpdateStatement,
     state: &mut QueryState,
-) -> Result<ValueType, anyhow::Error> {
+) -> Result<Kind, anyhow::Error> {
     let is_only = update.only;
 
     let return_type = match &update.output {
         Some(Output::After) | None => get_update_fields(update, state, None)?,
-        Some(Output::Before) => ValueType::Either(vec![
-            get_update_fields(update, state, None)?,
-            ValueType::Null,
-        ]),
-        Some(Output::Null) => ValueType::Null,
+        Some(Output::Before) => {
+            Kind::Either(vec![get_update_fields(update, state, None)?, Kind::Null])
+        }
+        Some(Output::Null) => Kind::Null,
         Some(Output::Diff) => Err(anyhow::anyhow!("Update with returned diff not supported"))?,
         Some(Output::Fields(fields)) => get_update_fields(update, state, Some(fields))?,
-        Some(Output::None) => ValueType::Never,
+        Some(Output::None) => Kind::Null,
         #[allow(unreachable_patterns)]
         _ => Err(anyhow::anyhow!(format!(
             "Unknown UPDATE statement type: {}",
@@ -36,7 +36,7 @@ pub fn get_update_statement_return_type(
     if is_only {
         Ok(return_type)
     } else {
-        Ok(ValueType::Array(Box::new(return_type)))
+        Ok(kind!(Arr return_type))
     }
 }
 
@@ -44,14 +44,14 @@ fn get_update_fields(
     update: &UpdateStatement,
     state: &mut QueryState,
     fields: Option<&Fields>,
-) -> Result<ValueType, anyhow::Error> {
+) -> Result<Kind, anyhow::Error> {
     get_statement_fields(&update.what, state, fields, |fields, state| {
-        state.set_local("after", ValueType::Object(fields.clone()));
+        state.set_local("after", kind!(Obj fields.clone()));
         state.set_local(
             "before",
-            ValueType::Either(vec![ValueType::Object(fields.clone()), ValueType::Null]),
+            kind!(Either[kind!(Obj fields.clone()), kind!(Null)]),
         );
-        state.set_local("this", ValueType::Object(fields.clone()));
+        state.set_local("this", kind!(Obj fields.clone()));
     })
 }
 
@@ -77,7 +77,7 @@ fn validate_data_type(
                 // if tables.len() == 1 {
                 //     state.infer(param.0.as_str(), tables.pop().unwrap());
                 // } else if tables.len() > 1 {
-                //     state.infer(&param.0.as_str(), ValueType::Either(tables));
+                //     state.infer(&param.0.as_str(), Kind::Either(tables));
                 // }
             }
 

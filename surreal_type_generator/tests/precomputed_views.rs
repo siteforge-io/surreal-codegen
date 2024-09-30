@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use surreal_type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{kind, QueryResult};
 
 #[test]
 fn precomputed_views() -> anyhow::Result<()> {
@@ -19,13 +19,10 @@ FROM foo;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("id".to_string(), ValueType::Record(vec!["baz".into()])),
-                ("num".to_string(), ValueType::Number),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            id: kind!(Record ["baz"]),
+            num: kind!(Number)
+        })])]
     );
 
     Ok(())
@@ -55,22 +52,16 @@ SELECT * FROM baz;
     assert_eq_sorted!(
         return_types,
         vec![
-            ValueType::Array(Box::new(ValueType::Object(
-                [
-                    ("num".to_string(), ValueType::Number),
-                    ("five".to_string(), ValueType::Number),
-                ]
-                .into()
-            ))),
-            ValueType::Array(Box::new(ValueType::Object(
-                [
-                    ("id".to_string(), ValueType::Record(vec!["baz".into()])),
-                    ("num".to_string(), ValueType::Number),
-                    ("five".to_string(), ValueType::Number),
-                    ("beep".to_string(), ValueType::Number),
-                ]
-                .into()
-            ))),
+            kind!([kind!({
+                num: kind!(Number),
+                five: kind!(Number)
+            })]),
+            kind!([kind!({
+                id: kind!(Record ["baz"]),
+                num: kind!(Number),
+                five: kind!(Number),
+                beep: kind!(Number)
+            })])
         ]
     );
 

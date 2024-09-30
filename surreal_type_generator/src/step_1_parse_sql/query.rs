@@ -2,11 +2,9 @@ use std::collections::BTreeMap;
 
 use surrealdb::sql::{parse, Cast, Param, Statement, Value};
 
-use crate::{kind_to_return_type, ValueType};
-
 pub struct QueryParsed {
     pub statements: Vec<Statement>,
-    pub casted_parameters: BTreeMap<String, ValueType>,
+    pub casted_parameters: BTreeMap<String, crate::Kind>,
 }
 
 pub fn parse_query(query: &str) -> Result<QueryParsed, anyhow::Error> {
@@ -21,7 +19,7 @@ pub fn parse_query(query: &str) -> Result<QueryParsed, anyhow::Error> {
                 1: Value::Param(Param { 0: ident, .. }),
                 ..
             })) => {
-                parameter_types.insert(ident.to_string(), kind_to_return_type(&kind)?);
+                parameter_types.insert(ident.to_string(), kind);
             }
             _ => statements.push(stmt),
         }

@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use surreal_type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{kind, QueryResult};
 
 #[test]
 fn nested_schema_object() -> anyhow::Result<()> {
@@ -11,8 +11,10 @@ FROM foo;
 
     let schema = r#"
 DEFINE TABLE foo SCHEMAFULL;
-DEFINE FIELD bar ON foo TYPE array<object>;
-DEFINE FIELD bar.*.baz ON foo TYPE string;
+DEFINE FIELD bar ON foo TYPE array<{
+    baz: string
+}>;
+// DEFINE FIELD bar.*.baz ON foo TYPE string;
 "#;
 
     let QueryResult { return_types, .. } =
@@ -20,15 +22,13 @@ DEFINE FIELD bar.*.baz ON foo TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [(
-                "bar".into(),
-                ValueType::Array(Box::new(ValueType::Object(
-                    [("baz".into(), ValueType::String),].into()
-                )))
-            ),]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            bar: kind!([
+                kind!({
+                    baz: kind!(String)
+                })
+            ])
+        })])]
     );
 
     Ok(())
@@ -52,9 +52,9 @@ DEFINE FIELD bar ON foo FLEXIBLE TYPE object;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [("bar".into(), ValueType::Any),].into()
-        )))]
+        vec![kind!([kind!({
+            bar: kind!(Object)
+        })])]
     );
 
     Ok(())

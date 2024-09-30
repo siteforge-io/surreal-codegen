@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use surreal_type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{kind, QueryResult};
 
 #[test]
 fn select_group_by() -> anyhow::Result<()> {
@@ -23,13 +23,10 @@ DEFINE FIELD age ON user TYPE int;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("name".to_string(), ValueType::String),
-                ("baz".to_string(), ValueType::Number),
-            ]
-            .into()
-        ))),]
+        vec![kind!([kind!({
+            name: kind!(String),
+            baz: kind!(Number)
+        })]),]
     );
 
     Ok(())
@@ -56,13 +53,10 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("name".to_string(), ValueType::String),
-                ("total".to_string(), ValueType::Number),
-            ]
-            .into()
-        ))),]
+        vec![kind!([kind!({
+            name: kind!(String),
+            total: kind!(Number)
+        })])]
     );
 
     Ok(())
@@ -87,9 +81,9 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [("total".to_string(), ValueType::Number),].into()
-        ))),]
+        vec![kind!([kind!({
+                total: kind!(Number)
+        })])]
     );
 
     Ok(())

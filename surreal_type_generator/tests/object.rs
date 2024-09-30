@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use surreal_type_generator::QueryResult;
+use surreal_type_generator::{kind, QueryResult};
 
 #[test]
 fn can_interpret_object() -> Result<(), anyhow::Error> {
@@ -22,22 +22,13 @@ RETURN {
 
     assert_eq_sorted!(
         return_types,
-        vec![surreal_type_generator::ValueType::Object(
-            [
-                (
-                    "foo".to_string(),
-                    surreal_type_generator::ValueType::Object(
-                        [
-                            ("bar".to_string(), surreal_type_generator::ValueType::Number),
-                            ("baz".to_string(), surreal_type_generator::ValueType::Number),
-                        ]
-                        .into()
-                    ),
-                ),
-                ("qux".to_string(), surreal_type_generator::ValueType::Number),
-            ]
-            .into()
-        )]
+        vec![kind!({
+            foo: kind!({
+                    bar: kind!(Number),
+                baz: kind!(Number)
+            }),
+            qux: kind!(Number)
+        })]
     );
 
     Ok(())

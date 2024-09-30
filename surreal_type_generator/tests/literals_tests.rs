@@ -1,5 +1,5 @@
 use pretty_assertions_sorted;
-use surreal_type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{kind, Kind, Literal, QueryResult};
 use surrealdb::sql::Duration;
 
 #[test]
@@ -19,40 +19,24 @@ CREATE ONLY baz CONTENT {
 
     pretty_assertions_sorted::assert_eq_sorted!(
         return_types,
-        vec![ValueType::Object(
-            [
-                ("id".into(), ValueType::Record(["baz".into()].into())),
-                (
-                    "foo".into(),
-                    ValueType::Either(
-                        [
-                            ValueType::StringLiteral("A".into()),
-                            ValueType::DurationLiteral(Duration::new(86400, 0)),
-                            ValueType::NumberLiteral(123.into()),
-                            ValueType::Array(Box::new(ValueType::Either(
-                                [
-                                    ValueType::NumberLiteral(1.into()),
-                                    ValueType::NumberLiteral(2.into()),
-                                ]
-                                .into()
-                            ))),
-                            ValueType::Object(
-                                [(
-                                    "foo".into(),
-                                    ValueType::Either(
-                                        [ValueType::String, ValueType::NumberLiteral(123.into()),]
-                                            .into()
-                                    )
-                                )]
-                                .into()
-                            )
-                        ]
-                        .into()
-                    )
-                )
-            ]
-            .into()
-        )]
+        vec![kind!({
+            id: kind!(Record ["baz"]),
+            foo: kind!(Either [
+                Kind::Literal(Literal::String("A".into())),
+                Kind::Literal(Literal::Duration(Duration::new(86400, 0))),
+                Kind::Literal(Literal::Number(123.into())),
+                kind!([kind!(Either [
+                    Kind::Literal(Literal::Number(1.into())),
+                    Kind::Literal(Literal::Number(2.into()))
+                ])]),
+                kind!({
+                    foo: kind!(Either [
+                        kind!(String),
+                        Kind::Literal(Literal::Number(123.into()))
+                    ])
+                })
+            ])
+        })]
     );
 
     Ok(())
@@ -72,15 +56,9 @@ SELECT [] as foo, [1, 2, 3] as num_list FROM baz;
 
     pretty_assertions_sorted::assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("foo".into(), ValueType::Array(Box::new(ValueType::Never))),
-                (
-                    "num_list".into(),
-                    ValueType::Array(Box::new(ValueType::Number))
-                ),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            foo: kind!([kind!(Null)]),
+            num_list: kind!([kind!(Number)])
+        })])]
     );
 }

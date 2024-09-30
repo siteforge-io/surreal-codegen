@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use surreal_type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{kind, var_map, QueryResult};
 
 #[test]
 fn simple_create_content_query() -> anyhow::Result<()> {
@@ -20,14 +20,11 @@ DEFINE FIELD age ON user TYPE number;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("id".into(), ValueType::Record(vec!["user".into()]).into()),
-                ("name".into(), ValueType::String.into()),
-                ("age".into(), ValueType::Number.into()),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            id: kind!(Record ["user"]),
+            name: kind!(String),
+            age: kind!(Number)
+        })])]
     );
 
     Ok(())
@@ -45,10 +42,7 @@ DEFINE TABLE foo SCHEMAFULL;
     let QueryResult { return_types, .. } =
         surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    assert_eq_sorted!(
-        return_types,
-        vec![ValueType::Array(Box::new(ValueType::Never))]
-    );
+    assert_eq_sorted!(return_types, vec![kind!([kind!(Null)])]);
 
     Ok(())
 }
@@ -65,10 +59,7 @@ DEFINE TABLE foo SCHEMAFULL;
     let QueryResult { return_types, .. } =
         surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    assert_eq_sorted!(
-        return_types,
-        vec![ValueType::Array(Box::new(ValueType::Null))]
-    );
+    assert_eq_sorted!(return_types, vec![kind!([kind!(Null)])]);
 
     Ok(())
 }
@@ -85,10 +76,7 @@ DEFINE TABLE foo SCHEMAFULL;
     let QueryResult { return_types, .. } =
         surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    assert_eq_sorted!(
-        return_types,
-        vec![ValueType::Array(Box::new(ValueType::Null))]
-    );
+    assert_eq_sorted!(return_types, vec![kind!([kind!(Null)])]);
 
     Ok(())
 }
@@ -108,13 +96,10 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("id".into(), ValueType::Record(vec!["user".into()]).into()),
-                ("name".into(), ValueType::String.into()),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            id: kind!(Record ["user"]),
+            name: kind!(String)
+        })])]
     );
 
     Ok(())
@@ -139,53 +124,33 @@ DEFINE FIELD opt ON user TYPE option<string>;
         ..
     } = surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    let user_vars = ValueType::Object(
-        [
-            (
-                "id".to_string(),
-                ValueType::Option(Box::new(ValueType::Record(vec!["user".into()]))),
-            ),
-            ("name".to_string(), ValueType::String),
-            ("email".to_string(), ValueType::String),
-            (
-                "created_at".to_string(),
-                ValueType::Option(Box::new(ValueType::Datetime)),
-            ),
-            (
-                "opt".to_string(),
-                ValueType::Option(Box::new(ValueType::String)),
-            ),
-        ]
-        .into(),
-    );
+    let user_vars = kind!({
+        id: kind!(Opt (kind!(Record ["user"]))),
+        name: kind!(String),
+        email: kind!(String),
+        created_at: kind!(Opt (kind!(Datetime))),
+        opt: kind!(Opt (kind!(String)))
+    });
 
     assert_eq_sorted!(
         variables,
-        [(
-            "user".to_string(),
-            ValueType::Either(vec![
-                ValueType::Array(Box::new(user_vars.clone())),
+        var_map! {
+            user: kind!(Either [
                 user_vars.clone(),
+                kind!([user_vars.clone()]),
             ])
-        )]
-        .into()
+        }
     );
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("id".into(), ValueType::Record(vec!["user".into()]).into()),
-                ("name".into(), ValueType::String.into()),
-                ("email".into(), ValueType::String.into()),
-                ("created_at".into(), ValueType::Datetime.into()),
-                (
-                    "opt".into(),
-                    ValueType::Option(Box::new(ValueType::String.into())).into()
-                ),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            id: kind!(Record ["user"]),
+            name: kind!(String),
+            email: kind!(String),
+            created_at: kind!(Datetime),
+            opt: kind!(Opt (kind!(String)))
+        })])]
     );
 
     Ok(())
@@ -210,47 +175,33 @@ DEFINE FIELD updated_at ON user TYPE datetime VALUE time::now();
         ..
     } = surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    let user_vars = ValueType::Object(
-        [
-            (
-                "id".to_string(),
-                ValueType::Option(Box::new(ValueType::Record(vec!["user".into()]))),
-            ),
-            ("name".to_string(), ValueType::String),
-            (
-                "age".to_string(),
-                ValueType::Option(Box::new(ValueType::Number)),
-            ),
-            ("email".to_string(), ValueType::String),
-        ]
-        .into(),
-    );
+    let user_vars = kind!({
+        id: kind!(Opt (kind!(Record ["user"]))),
+        name: kind!(String),
+        age: kind!(Opt (kind!(Number))),
+        email: kind!(String)
+    });
 
     assert_eq_sorted!(
         variables,
-        [(
-            "user".to_string(),
-            ValueType::Either(vec![
-                ValueType::Array(Box::new(user_vars.clone())),
+        var_map! {
+            user: kind!(Either [
                 user_vars.clone(),
+                kind!(Arr user_vars.clone()),
             ])
-        )]
-        .into()
+        }
     );
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("id".into(), ValueType::Record(vec!["user".into()])),
-                ("name".into(), ValueType::String),
-                ("age".into(), ValueType::Number),
-                ("email".into(), ValueType::String),
-                ("created_at".into(), ValueType::Datetime),
-                ("updated_at".into(), ValueType::Datetime),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            id: kind!(Record ["user"]),
+            name: kind!(String),
+            age: kind!(Number),
+            email: kind!(String),
+            created_at: kind!(Datetime),
+            updated_at: kind!(Datetime)
+        })])]
     );
 
     Ok(())

@@ -6,11 +6,11 @@ use surrealdb::sql::{
         DefineFieldStatement, DefineFunctionStatement, DefineStatement, DefineTableStatement,
         IfelseStatement, ThrowStatement,
     },
-    Block, Entry, Expression, Fields, Function, Idiom, Param, Part, Query, Statement, Tables,
-    Value,
+    Block, Entry, Expression, Fields, Function, Idiom, Kind, Literal, Param, Part, Query,
+    Statement, Tables, Value,
 };
 
-use crate::{kind_to_return_type, ValueType};
+use crate::kind;
 
 #[derive(Debug, PartialEq)]
 pub struct SchemaParsed {
@@ -29,7 +29,7 @@ pub struct ViewParsed {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionParsed {
     pub name: String,
-    pub arguments: Vec<(String, ValueType)>,
+    pub arguments: Vec<(String, Kind)>,
     pub block: Block,
 }
 
@@ -44,7 +44,7 @@ pub enum FieldType {
 #[derive(Debug, PartialEq)]
 pub struct TableParsed {
     pub name: String,
-    pub id_value_type: ValueType,
+    pub id_value_type: Kind,
     pub fields: BTreeMap<String, FieldParsed>,
 }
 
@@ -52,7 +52,7 @@ pub struct TableParsed {
 pub struct FieldParsed {
     pub name: String,
     pub is_optional: bool,
-    pub return_type: ValueType,
+    pub return_type: Kind,
     pub has_default: bool,
     pub has_override_value: bool,
     pub flexible: bool,
@@ -61,10 +61,10 @@ pub struct FieldParsed {
 }
 
 impl FieldParsed {
-    pub fn compute_create_type(&self) -> ValueType {
+    pub fn compute_create_type(&self) -> Kind {
         match &self.field_type {
             FieldType::Simple => match self.is_optional || self.has_default {
-                true => ValueType::Option(Box::new(self.return_type.clone())),
+                true => Kind::Option(Box::new(self.return_type.clone())),
                 false => self.return_type.clone(),
             },
             FieldType::NestedObject(obj) => {
@@ -75,10 +75,10 @@ impl FieldParsed {
                     }
                 }
 
-                let fields = ValueType::Object(fields);
+                let fields = kind!(Obj fields);
 
                 match self.is_optional || self.has_default {
-                    true => ValueType::Option(Box::new(fields)),
+                    true => Kind::Option(Box::new(fields)),
                     false => fields,
                 }
             }
@@ -86,10 +86,10 @@ impl FieldParsed {
         }
     }
 
-    pub fn compute_select_type(&self) -> ValueType {
+    pub fn compute_select_type(&self) -> Kind {
         match &self.field_type {
             FieldType::Simple => match self.is_optional {
-                true => ValueType::Option(Box::new(self.return_type.clone())),
+                true => Kind::Option(Box::new(self.return_type.clone())),
                 false => self.return_type.clone(),
             },
             FieldType::NestedObject(obj) => {
@@ -98,10 +98,10 @@ impl FieldParsed {
                     fields.insert(key.clone(), value.compute_select_type());
                 }
 
-                let fields = ValueType::Object(fields);
+                let fields = kind!(Obj fields);
 
                 match self.is_optional {
-                    true => ValueType::Option(Box::new(fields)),
+                    true => Kind::Option(Box::new(fields)),
                     false => fields,
                 }
             }
@@ -113,7 +113,7 @@ impl FieldParsed {
                         for (key, value) in fields {
                             select_fields.insert(key.clone(), value.compute_select_type());
                         }
-                        ValueType::Object(select_fields)
+                        kind!(Obj select_fields)
                     }
                     FieldType::NestedArray(..) => {
                         todo!("Nested array in nested array are not yet supported")
@@ -121,14 +121,14 @@ impl FieldParsed {
                 };
 
                 match self.is_optional {
-                    true => ValueType::Option(Box::new(ValueType::Array(Box::new(select_type)))),
-                    false => ValueType::Array(Box::new(select_type)),
+                    true => kind!(Opt(kind!([select_type]))),
+                    false => kind!(Arr select_type),
                 }
             }
         }
     }
 
-    pub fn compute_update_type(&self) -> ValueType {
+    pub fn compute_update_type(&self) -> Kind {
         todo!()
         // return both flatten types
         // ignore readonlys
@@ -136,7 +136,7 @@ impl FieldParsed {
 }
 
 impl TableParsed {
-    pub fn compute_create_fields(&self) -> BTreeMap<String, ValueType> {
+    pub fn compute_create_fields(&self) -> BTreeMap<String, Kind> {
         let mut fields = BTreeMap::new();
         for (key, field) in &self.fields {
             if !field.has_override_value {
@@ -146,7 +146,7 @@ impl TableParsed {
         fields
     }
 
-    pub fn compute_select_fields(&self) -> BTreeMap<String, ValueType> {
+    pub fn compute_select_fields(&self) -> BTreeMap<String, Kind> {
         let mut fields = BTreeMap::new();
         for (key, value) in &self.fields {
             fields.insert(key.clone(), value.compute_select_type());
@@ -154,7 +154,7 @@ impl TableParsed {
         fields
     }
 
-    pub fn compute_update_fields(&self) -> BTreeMap<String, ValueType> {
+    pub fn compute_update_fields(&self) -> BTreeMap<String, Kind> {
         let mut fields = BTreeMap::new();
         for (key, value) in &self.fields {
             fields.insert(key.clone(), value.compute_update_type());
@@ -178,14 +178,14 @@ fn parse_table(
             has_override_value: false,
             readonly: true,
             flexible: false,
-            return_type: ValueType::Record(vec![table.name.clone().into()]),
+            return_type: Kind::Record(vec![table.name.clone().into()]),
         },
     )]);
 
     for (idiom, field) in field_definitions {
         let return_type = match &field.kind {
-            Some(kind) => kind_to_return_type(kind)?,
-            None => anyhow::bail!("You must define a type for field `{}`", field.to_string()),
+            Some(kind) => kind,
+            None => &kind!(Any),
         };
 
         let to_insert = FieldParsed {
@@ -193,17 +193,20 @@ fn parse_table(
                 Part::Field(ident) => ident.to_string(),
                 _ => anyhow::bail!("Invalid path `{}`", idiom),
             },
-            is_optional: return_type.is_optional(),
+            is_optional: match return_type {
+                Kind::Option(..) => true,
+                _ => false,
+            },
             field_type: match &return_type {
-                ValueType::Any => match field.flex {
+                Kind::Any => match field.flex {
                     false => FieldType::NestedObject(BTreeMap::new()),
                     true => FieldType::Simple,
                 },
-                ValueType::Option(box ValueType::Any) => match field.flex {
+                Kind::Option(box Kind::Any) => match field.flex {
                     false => FieldType::NestedObject(BTreeMap::new()),
                     true => FieldType::Simple,
                 },
-                ValueType::Array(box ValueType::Any) => match field.flex {
+                Kind::Array(box Kind::Any, ..) => match field.flex {
                     false => {
                         FieldType::NestedArray(Box::new(FieldType::NestedObject(BTreeMap::new())))
                     }
@@ -218,9 +221,9 @@ fn parse_table(
             },
             readonly: field.readonly,
             flexible: field.flex,
-            return_type: match &return_type {
-                ValueType::Option(inner_type) => *inner_type.clone(),
-                _ => return_type,
+            return_type: match return_type {
+                Kind::Option(inner_type) => *inner_type.clone(),
+                _ => return_type.clone(),
             },
         };
 
@@ -230,10 +233,10 @@ fn parse_table(
     // Handle edge case where DEFINE FIELD id ON foo TYPE string is used
     // Since, the return type is still a record<foo> we need to note that.
     let id_value_type = match &mut fields.get_mut("id").unwrap().return_type {
-        ValueType::Record(..) => ValueType::String,
+        Kind::Record(..) => Kind::String,
         val => {
             let id_value_type = val.clone();
-            *val = ValueType::Record(vec![table.name.clone().into()]);
+            *val = Kind::Record(vec![table.name.clone().into()]);
             id_value_type
         }
     };
@@ -421,10 +424,8 @@ pub fn parse_schema(schema: &str) -> Result<SchemaParsed, anyhow::Error> {
                         name: name.to_string(),
                         arguments: args
                             .iter()
-                            .map(|(ident, kind)| {
-                                Ok((ident.to_string(), kind_to_return_type(kind)?))
-                            })
-                            .collect::<Result<Vec<(String, ValueType)>, anyhow::Error>>()?,
+                            .map(|(ident, kind)| Ok((ident.to_string(), kind.clone())))
+                            .collect::<Result<Vec<(String, Kind)>, anyhow::Error>>()?,
                         block: block.clone(),
                     },
                 );

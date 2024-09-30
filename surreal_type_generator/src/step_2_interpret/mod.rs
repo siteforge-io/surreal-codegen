@@ -5,7 +5,7 @@ mod schema;
 mod statements;
 mod utils;
 
-use crate::ValueType;
+use crate::Kind;
 pub use return_types::get_statement_fields;
 use return_types::get_value_return_type;
 use statements::*;
@@ -19,7 +19,7 @@ pub use schema::SchemaState;
 pub fn interpret_query(
     statements: &Vec<Statement>,
     state: &mut QueryState,
-) -> Result<Vec<ValueType>, anyhow::Error> {
+) -> Result<Vec<Kind>, anyhow::Error> {
     statements
         .iter()
         .map(|stmt| get_statement_return_type(stmt, state))
@@ -30,7 +30,7 @@ pub fn interpret_query(
 fn get_statement_return_type(
     stmt: &Statement,
     state: &mut QueryState,
-) -> Result<Option<ValueType>, anyhow::Error> {
+) -> Result<Option<Kind>, anyhow::Error> {
     Ok(Some(match stmt {
         Statement::Select(select) => get_select_statement_return_type(select, state)?,
         Statement::Delete(delete) => get_delete_statement_return_type(delete, state)?,
@@ -49,7 +49,7 @@ fn get_statement_return_type(
 fn get_subquery_return_type(
     subquery: &Subquery,
     state: &mut QueryState,
-) -> Result<ValueType, anyhow::Error> {
+) -> Result<Kind, anyhow::Error> {
     match subquery {
         Subquery::Select(select) => get_select_statement_return_type(select, state),
         Subquery::Delete(delete) => get_delete_statement_return_type(delete, state),

@@ -1,21 +1,22 @@
 use surrealdb::sql::{statements::CreateStatement, Data, Fields, Output, Value, Values};
 
 use crate::{
+    kind,
     step_2_interpret::{get_statement_fields, schema::QueryState},
-    ValueType,
+    Kind,
 };
 
 pub fn get_create_statement_return_type(
     create: &CreateStatement,
     state: &mut QueryState,
-) -> Result<ValueType, anyhow::Error> {
+) -> Result<Kind, anyhow::Error> {
     let is_only = create.only;
 
     let return_type = match &create.output {
         // default return type
         Some(Output::After) | None => get_create_fields(create, state, None)?,
-        Some(Output::Before | Output::Null) => ValueType::Null,
-        Some(Output::None) => ValueType::Never,
+        Some(Output::Before | Output::Null) => Kind::Null,
+        Some(Output::None) => Kind::Null,
         Some(Output::Diff) => anyhow::bail!("Create with returned diff is not currently supported"),
         Some(Output::Fields(fields)) => get_create_fields(create, state, Some(fields))?,
         #[allow(unreachable_patterns)]
@@ -30,7 +31,7 @@ pub fn get_create_statement_return_type(
     if is_only {
         Ok(return_type)
     } else {
-        Ok(ValueType::Array(Box::new(return_type)))
+        Ok(kind!(Arr return_type))
     }
 }
 
@@ -38,11 +39,11 @@ fn get_create_fields(
     create: &CreateStatement,
     state: &mut QueryState,
     fields: Option<&Fields>,
-) -> Result<ValueType, anyhow::Error> {
+) -> Result<Kind, anyhow::Error> {
     get_statement_fields(&create.what, state, fields, |fields, state| {
-        state.set_local("after", ValueType::Object(fields.clone()));
-        state.set_local("before", ValueType::Null);
-        state.set_local("this", ValueType::Object(fields.clone()));
+        state.set_local("after", kind!(Obj fields.clone()));
+        state.set_local("before", Kind::Null);
+        state.set_local("this", kind!(Obj fields.clone()));
     })
 }
 
@@ -63,14 +64,9 @@ fn validate_data_type(
                 };
                 match state.schema.schema.tables.get(table_name) {
                     Some(table) => {
-                        let create_fields = ValueType::Object(table.compute_create_fields());
-                        tables.push(ValueType::Either(
-                            [
-                                ValueType::Array(Box::new(create_fields.clone())),
-                                create_fields,
-                            ]
-                            .into(),
-                        ));
+                        let create_fields = kind!(Obj table.compute_create_fields());
+                        tables
+                            .push(kind!(Either [create_fields.clone(), kind!(Arr create_fields)]));
                     }
                     None => anyhow::bail!(
                         "Trying to create a record with an unknown or view table: {}",
@@ -82,7 +78,7 @@ fn validate_data_type(
             if tables.len() == 1 {
                 state.infer(param.0.as_str(), tables.pop().unwrap());
             } else if tables.len() > 1 {
-                state.infer(&param.0.as_str(), ValueType::Either(tables));
+                state.infer(&param.0.as_str(), Kind::Either(tables));
             }
 
             Ok(())

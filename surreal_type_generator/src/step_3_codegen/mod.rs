@@ -12,14 +12,14 @@ use surrealdb::sql::Statement;
 
 use crate::{
     step_2_interpret::{interpret_query, QueryState, SchemaState},
-    ValueType,
+    Kind,
 };
 
 pub struct QueryResult {
     pub statements: Vec<Statement>,
-    pub variables: BTreeMap<String, ValueType>,
+    pub variables: BTreeMap<String, Kind>,
     pub state: QueryState,
-    pub return_types: Vec<ValueType>,
+    pub return_types: Vec<Kind>,
 }
 
 pub fn query_to_return_type(query: &str, schema: &str) -> anyhow::Result<QueryResult> {
@@ -41,7 +41,7 @@ pub fn output_query_type(query: &str, schema: Arc<SchemaState>) -> anyhow::Resul
 pub fn query_to_return_type_with_globals(
     query: &str,
     schema: &str,
-    globals: &BTreeMap<String, ValueType>,
+    globals: &BTreeMap<String, Kind>,
 ) -> anyhow::Result<QueryResult> {
     let state = crate::step_2_interpret::interpret_schema(schema, globals.clone())?;
 

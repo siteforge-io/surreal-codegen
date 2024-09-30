@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use surreal_type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{Kind, QueryResult};
 
 #[test]
 fn return_and_expressions() -> anyhow::Result<()> {
@@ -38,22 +38,22 @@ DEFINE TABLE placeholder SCHEMAFULL;
     assert_eq_sorted!(
         return_types,
         vec![
-            ValueType::String,
-            ValueType::Number,
-            ValueType::Number,
-            ValueType::Bool,
-            ValueType::Bool,
-            ValueType::Bool,
-            ValueType::Bool,
-            ValueType::Bool,
-            ValueType::Bool,
-            ValueType::Bool,
-            ValueType::Bool,
-            ValueType::Bool,
-            ValueType::Bool,
-            ValueType::Bool,
-            ValueType::Bool,
-            ValueType::Bool
+            Kind::String,
+            Kind::Number,
+            Kind::Number,
+            Kind::Bool,
+            Kind::Bool,
+            Kind::Bool,
+            Kind::Bool,
+            Kind::Bool,
+            Kind::Bool,
+            Kind::Bool,
+            Kind::Bool,
+            Kind::Bool,
+            Kind::Bool,
+            Kind::Bool,
+            Kind::Bool,
+            Kind::Bool
         ]
     );
 

@@ -1,5 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use surreal_type_generator::{QueryResult, ValueType};
+use surreal_type_generator::{kind, QueryResult};
 
 #[test]
 fn field_defaults() -> anyhow::Result<()> {
@@ -18,13 +18,10 @@ CREATE user;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("id".into(), ValueType::Record(vec!["user".into()])),
-                ("created_at".into(), ValueType::Datetime),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            id: kind!(Record ["user"]),
+            created_at: kind!(Datetime)
+        })])]
     );
     Ok(())
 }

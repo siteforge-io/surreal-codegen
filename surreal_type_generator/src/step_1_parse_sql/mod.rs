@@ -8,15 +8,15 @@ pub use schema::*;
 
 // #[derive(Debug, Clone)]
 // pub struct ParseState {
-//     pub global: Arc<Mutex<HashMap<String, ValueType>>>,
-//     pub inferred: Arc<Mutex<HashMap<String, ValueType>>>,
-//     pub defined: Arc<Mutex<HashMap<String, ValueType>>>,
-//     pub locals: HashMap<String, ValueType>,
+//     pub global: Arc<Mutex<HashMap<String, Kind>>>,
+//     pub inferred: Arc<Mutex<HashMap<String, Kind>>>,
+//     pub defined: Arc<Mutex<HashMap<String, Kind>>>,
+//     pub locals: HashMap<String, Kind>,
 // }
 
 // impl ParseState {
 //     /// Look up a parameter, moving up in the scope chain until it is found
-//     pub fn get(&self, param_name: &str) -> Option<ValueType> {
+//     pub fn get(&self, param_name: &str) -> Option<Kind> {
 //         if let Some(return_type) = self.locals.get(param_name) {
 //             return Some(return_type.clone());
 //         } else if let Some(return_type) = self.defined.lock().unwrap().get(param_name) {
@@ -66,38 +66,38 @@ pub use schema::*;
 //         let expected_table = TableParsed {
 //             name: "user".into(),
 //             fields: [
-//                 ("id".into(), ValueType::Record(vec!["user".into()])),
-//                 ("name".into(), ValueType::String),
-//                 ("age".into(), ValueType::Int),
-//                 ("bool".into(), ValueType::Bool),
-//                 ("datetime".into(), ValueType::Datetime),
-//                 ("duration".into(), ValueType::Duration),
-//                 ("decimal".into(), ValueType::Decimal),
+//                 ("id".into(), Kind::Record(vec!["user".into()])),
+//                 ("name".into(), Kind::String),
+//                 ("age".into(), Kind::Int),
+//                 ("bool".into(), Kind::Bool),
+//                 ("datetime".into(), Kind::Datetime),
+//                 ("duration".into(), Kind::Duration),
+//                 ("decimal".into(), Kind::Decimal),
 //                 (
 //                     "xyz".into(),
-//                     ValueType::Record(vec![Table::from("xyz")]),
+//                     Kind::Record(vec![Table::from("xyz")]),
 //                 ),
 //                 (
 //                     "arr".into(),
-//                     ValueType::Array(Box::new(ValueType::String)),
+//                     Kind::Array(Box::new(Kind::String)),
 //                 ),
 //                 (
 //                     "nested_obj".into(),
-//                     ValueType::Object(HashMap::from([
-//                         ("abc".into(), ValueType::String),
-//                         ("xyz".into(), ValueType::String),
+//                     Kind::Object(HashMap::from([
+//                         ("abc".into(), Kind::String),
+//                         ("xyz".into(), Kind::String),
 //                     ])),
 //                 ),
 //                 (
 //                     "nested_arr".into(),
-//                     ValueType::Array(Box::new(ValueType::Object(HashMap::from([
-//                         ("bar".into(), ValueType::String),
-//                         ("foo".into(), ValueType::String),
+//                     Kind::Array(Box::new(Kind::Object(HashMap::from([
+//                         ("bar".into(), Kind::String),
+//                         ("foo".into(), Kind::String),
 //                     ])))),
 //                 ),
 //                 (
 //                     "bar".into(),
-//                     ValueType::Array(Box::new(ValueType::String)),
+//                     Kind::Array(Box::new(Kind::String)),
 //                 ),
 //             ]
 //             .into(),
@@ -133,9 +133,9 @@ pub use schema::*;
 //                     TableParsed {
 //                         name: "user".into(),
 //                         fields: [
-//                             ("id".into(), ValueType::Record(vec!["user".into()])),
-//                             ("name".into(), ValueType::String),
-//                             ("age".into(), ValueType::Int),
+//                             ("id".into(), Kind::Record(vec!["user".into()])),
+//                             ("name".into(), Kind::String),
+//                             ("age".into(), Kind::Int),
 //                         ]
 //                         .into(),
 //                     }
@@ -147,14 +147,14 @@ pub use schema::*;
 //                         fields: [
 //                             (
 //                                 "foo_id".into(),
-//                                 ValueType::Record(vec!["user".into()])
+//                                 Kind::Record(vec!["user".into()])
 //                             ),
 //                             (
 //                                 "id".into(),
-//                                 ValueType::Record(vec!["user_view".into()])
+//                                 Kind::Record(vec!["user_view".into()])
 //                             ),
-//                             ("name".into(), ValueType::String),
-//                             ("age".into(), ValueType::Int),
+//                             ("name".into(), Kind::String),
+//                             ("age".into(), Kind::Int),
 //                         ]
 //                         .into(),
 //                     }

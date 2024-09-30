@@ -2,9 +2,7 @@ use std::collections::BTreeMap;
 
 use surrealdb::sql::{parse, Cast, Param, Value};
 
-use crate::{kind_to_return_type, ValueType};
-
-pub fn parse_value_casts(query: &str) -> Result<BTreeMap<String, ValueType>, anyhow::Error> {
+pub fn parse_value_casts(query: &str) -> Result<BTreeMap<String, crate::Kind>, anyhow::Error> {
     let mut parameter_types = BTreeMap::new();
 
     for stmt in parse(query)?.into_iter() {
@@ -14,7 +12,7 @@ pub fn parse_value_casts(query: &str) -> Result<BTreeMap<String, ValueType>, any
                 1: Value::Param(Param { 0: ident, .. }),
                 ..
             })) => {
-                parameter_types.insert(ident.to_string(), kind_to_return_type(&kind)?);
+                parameter_types.insert(ident.to_string(), kind);
             }
             _ => anyhow::bail!("Only casts eg: `<int> $param;` are supported in globals.surql"),
         }

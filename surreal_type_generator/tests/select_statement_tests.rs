@@ -1,6 +1,5 @@
 use pretty_assertions_sorted::assert_eq_sorted;
-use surreal_type_generator::{QueryResult, ValueType};
-use surrealdb::sql::Table;
+use surreal_type_generator::{kind, var_map, QueryResult};
 
 #[test]
 fn query_specific_value() -> anyhow::Result<()> {
@@ -15,10 +14,7 @@ DEFINE FIELD name ON user TYPE string;
     let QueryResult { return_types, .. } =
         surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    assert_eq_sorted!(
-        return_types,
-        vec![ValueType::Option(Box::new(ValueType::String))]
-    );
+    assert_eq_sorted!(return_types, vec![kind!(Opt(kind!(String)))]);
 
     Ok(())
 }
@@ -55,19 +51,16 @@ DEFINE FIELD number ON user TYPE number;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("name".to_string(), ValueType::String),
-                ("age".to_string(), ValueType::Int),
-                ("bool".to_string(), ValueType::Bool),
-                ("datetime".to_string(), ValueType::Datetime),
-                ("duration".to_string(), ValueType::Duration),
-                ("decimal".to_string(), ValueType::Decimal),
-                ("uuid".to_string(), ValueType::Uuid),
-                ("number".to_string(), ValueType::Number),
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            name: kind!(String),
+            age: kind!(Int),
+            bool: kind!(Bool),
+            datetime: kind!(Datetime),
+            duration: kind!(Duration),
+            decimal: kind!(Decimal),
+            uuid: kind!(Uuid),
+            number: kind!(Number)
+        })])]
     );
 
     Ok(())
@@ -90,9 +83,9 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Option(Box::new(ValueType::Object(
-            [("name".to_string(), ValueType::String)].into()
-        )))]
+        vec![kind!(Opt(kind!({
+            name: kind!(String)
+        })))]
     );
 
     Ok(())
@@ -118,18 +111,16 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         variables,
-        [(
-            "user".to_string(),
-            ValueType::Record(vec![Table::from("user")])
-        )]
-        .into()
+        var_map! {
+            user: kind!(Record ["user"])
+        }
     );
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [("name".to_string(), ValueType::String)].into()
-        )))]
+        vec![kind!([kind!({
+            name: kind!(String)
+        })])]
     );
 
     Ok(())
@@ -158,25 +149,14 @@ DEFINE FIELD user ON xyz TYPE record<user>;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [(
-                "xyz".into(),
-                ValueType::Object(
-                    [
-                        ("abc".into(), ValueType::String.into()),
-                        (
-                            "user".into(),
-                            ValueType::Object(
-                                [("xyz".into(), ValueType::Record([Table::from("xyz")].into())),]
-                                    .into()
-                            )
-                        ),
-                    ]
-                    .into()
-                )
-            ),]
-            .into()
-        ))),]
+        vec![kind!([kind!({
+            xyz: kind!({
+                abc: kind!(String),
+                user: kind!({
+                    xyz: kind!(Record ["xyz"])
+                })
+            })
+        })])],
     );
 
     Ok(())
@@ -199,9 +179,9 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Option(Box::new(ValueType::Object(
-            [("foo".into(), ValueType::String.into()),].into()
-        )))]
+        vec![kind!(Opt(kind!({
+            foo: kind!(String)
+        })))]
     );
 
     Ok(())
@@ -227,9 +207,9 @@ DEFINE FIELD name ON org TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Option(Box::new(ValueType::Object(
-            [("foo".into(), ValueType::String.into()),].into()
-        )))]
+        vec![kind!(Opt(kind!({
+            foo: kind!(String)
+        })))]
     );
 
     Ok(())
@@ -250,13 +230,10 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Option(Box::new(ValueType::Object(
-            [
-                ("name".to_string(), ValueType::String),
-                ("id".to_string(), ValueType::Record(vec!["user".into()]))
-            ]
-            .into()
-        )))]
+        vec![kind!(Opt(kind!({
+            name: kind!(String),
+            id: kind!(Record ["user"])
+        })))]
     );
 
     Ok(())
@@ -296,52 +273,18 @@ DEFINE FIELD abc2 ON xyz TYPE option<string>;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Option(Box::new(ValueType::Object(
-            [
-                (
-                    "name".into(),
-                    ValueType::Option(Box::new(ValueType::String.into())).into()
-                ),
-                (
-                    "num".into(),
-                    ValueType::Option(Box::new(ValueType::Int.into())).into()
-                ),
-                (
-                    "bool".into(),
-                    ValueType::Option(Box::new(ValueType::Bool.into())).into()
-                ),
-                (
-                    "datetime".into(),
-                    ValueType::Option(Box::new(ValueType::Datetime.into())).into()
-                ),
-                (
-                    "duration".into(),
-                    ValueType::Option(Box::new(ValueType::Duration.into())).into()
-                ),
-                (
-                    "decimal".into(),
-                    ValueType::Option(Box::new(ValueType::Decimal.into())).into()
-                ),
-                (
-                    "xyz".into(),
-                    ValueType::Option(Box::new(ValueType::Object(
-                        [
-                            (
-                                "abc".into(),
-                                ValueType::Option(Box::new(ValueType::String.into())).into()
-                            ),
-                            (
-                                "abc2".into(),
-                                ValueType::Option(Box::new(ValueType::String.into())).into()
-                            ),
-                        ]
-                        .into()
-                    )))
-                    .into()
-                ),
-            ]
-            .into()
-        )))]
+        vec![kind!(Opt(kind!({
+            name: kind!(Opt(kind!(String))),
+            num: kind!(Opt(kind!(Int))),
+            bool: kind!(Opt(kind!(Bool))),
+            datetime: kind!(Opt(kind!(Datetime))),
+            duration: kind!(Opt(kind!(Duration))),
+            decimal: kind!(Opt(kind!(Decimal))),
+            xyz: kind!(Opt(kind!({
+                abc: kind!(Opt(kind!(String))),
+                abc2: kind!(Opt(kind!(String)))
+            })))
+        })))]
     );
 
     Ok(())
@@ -365,13 +308,9 @@ DEFINE FIELD tags ON post TYPE array<string>;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [(
-                "tags".into(),
-                ValueType::Array(Box::new(ValueType::String.into()))
-            ),]
-            .into()
-        ))),]
+        vec![kind!([kind!({
+            tags: kind!([kind!(String)])
+        })])]
     );
 
     Ok(())
@@ -398,19 +337,10 @@ DEFINE FIELD xyz_list ON post TYPE array<record<xyz>> DEFAULT [];
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                (
-                    "tags".into(),
-                    ValueType::Array(Box::new(ValueType::String.into()))
-                ),
-                (
-                    "xyzs".into(),
-                    ValueType::Array(Box::new(ValueType::Record(vec![Table::from("xyz")])))
-                )
-            ]
-            .into()
-        ))),]
+        vec![kind!([kind!({
+            tags: kind!([kind!(String)]),
+            xyzs: kind!([kind!(Record ["xyz"])])
+        })])]
     );
 
     Ok(())
@@ -434,9 +364,9 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [("name".to_string(), ValueType::String)].into()
-        )))]
+        vec![kind!([kind!({
+            name: kind!(String)
+        })])]
     );
 
     Ok(())
@@ -460,9 +390,9 @@ DEFINE FIELD xyz ON user TYPE object;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [("xyz".into(), ValueType::Object([].into()).into()),].into()
-        ))),]
+        vec![kind!([kind!({
+            xyz: kind!(Object)
+        })])]
     );
 
     Ok(())
@@ -490,20 +420,13 @@ DEFINE FIELD num ON xyz TYPE int;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [(
-                "xyz".into(),
-                ValueType::Object(
-                    [
-                        ("id".into(), ValueType::Record(vec!["xyz".into()])),
-                        ("abc".into(), ValueType::String.into()),
-                        ("num".into(), ValueType::Int.into()),
-                    ]
-                    .into()
-                )
-            ),]
-            .into()
-        ))),]
+        vec![kind!([kind!({
+            xyz: kind!({
+                id: kind!(Record ["xyz"]),
+                abc: kind!(String),
+                num: kind!(Int)
+            })
+        })])]
     );
 
     Ok(())
@@ -521,9 +444,10 @@ FROM
 "#;
     let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
-DEFINE FIELD xyz ON user TYPE option<object>;
-DEFINE FIELD xyz.foo ON user TYPE option<string>;
-DEFINE FIELD xyz.abc ON user TYPE option<string>;
+DEFINE FIELD xyz ON user TYPE option<{
+    foo: option<string>,
+    abc: option<string>
+}>;
 "#;
 
     let QueryResult { return_types, .. } =
@@ -531,22 +455,13 @@ DEFINE FIELD xyz.abc ON user TYPE option<string>;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("id".into(), ValueType::Record(vec!["user".into()])),
-                (
-                    "xyz".into(),
-                    ValueType::Option(Box::new(ValueType::Object(
-                        [
-                            ("foo".into(), ValueType::Option(Box::new(ValueType::String))),
-                            ("abc".into(), ValueType::Option(Box::new(ValueType::String))),
-                        ]
-                        .into()
-                    )))
-                )
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            id: kind!(Record ["user"]),
+            xyz: kind!(Opt(kind!({
+                foo: kind!(Opt(kind!(String))),
+                abc: kind!(Opt(kind!(String)))
+            })))
+        })])]
     );
 
     Ok(())
@@ -563,10 +478,14 @@ FROM
 "#;
     let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
-DEFINE FIELD xyz ON user TYPE option<object>;
-DEFINE FIELD xyz.foo ON user TYPE option<string>;
-DEFINE FIELD xyz.abc ON user TYPE option<string>;
-DEFINE FIELD xyz.num ON user TYPE int;
+DEFINE FIELD xyz ON user TYPE option<{
+    foo: option<string>,
+    abc: option<string>,
+    num: int
+}>;
+// DEFINE FIELD xyz.foo ON user TYPE option<string>;
+// DEFINE FIELD xyz.abc ON user TYPE option<string>;
+// DEFINE FIELD xyz.num ON user TYPE int;
 "#;
 
     let QueryResult { return_types, .. } =
@@ -574,23 +493,14 @@ DEFINE FIELD xyz.num ON user TYPE int;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("id".into(), ValueType::Record(vec!["user".into()])),
-                (
-                    "bazza".into(),
-                    ValueType::Option(Box::new(ValueType::Object(
-                        [
-                            ("foo".into(), ValueType::Option(Box::new(ValueType::String))),
-                            ("abc".into(), ValueType::Option(Box::new(ValueType::String))),
-                            ("num".into(), ValueType::Int),
-                        ]
-                        .into()
-                    )))
-                )
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            id: kind!(Record ["user"]),
+            bazza: kind!(Opt(kind!({
+                foo: kind!(Opt(kind!(String))),
+                abc: kind!(Opt(kind!(String))),
+                num: kind!(Int)
+            })))
+        })])]
     );
 
     Ok(())
@@ -609,10 +519,7 @@ DEFINE FIELD baz ON user TYPE string;
     let QueryResult { return_types, .. } =
         surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    assert_eq_sorted!(
-        return_types,
-        vec![ValueType::Option(Box::new(ValueType::String))]
-    );
+    assert_eq_sorted!(return_types, vec![kind!(Opt(kind!(String)))]);
 
     Ok(())
 }
@@ -637,13 +544,10 @@ DEFINE FIELD foo ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![ValueType::Array(Box::new(ValueType::Object(
-            [
-                ("foo".into(), ValueType::String),
-                ("bar".into(), ValueType::Option(Box::new(ValueType::String)))
-            ]
-            .into()
-        )))]
+        vec![kind!([kind!({
+            foo: kind!(String),
+            bar: kind!(Opt(kind!(String)))
+        })])]
     );
 
     Ok(())
@@ -668,13 +572,13 @@ DEFINE FIELD foo ON user TYPE string;
 
 //     assert_eq_sorted!(
 //         return_types,
-//         vec![ValueType::Array(Box::new(ValueType::Object(
+//         vec![Kind::Array(Box::new(Kind::Object(
 //             [
-//                 ("name".into(), ValueType::String),
+//                 ("name".into(), Kind::String),
 //                 (
 //                     "best_friend".into(),
-//                     ValueType::Option(Box::new(ValueType::Object(
-//                         [("name".into(), ValueType::String)].into()
+//                     Kind::Option(Box::new(Kind::Object(
+//                         [("name".into(), Kind::String)].into()
 //                     )))
 //                 )
 //             ]

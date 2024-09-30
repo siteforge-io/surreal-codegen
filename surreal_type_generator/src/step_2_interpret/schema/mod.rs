@@ -1,10 +1,10 @@
 use std::{collections::BTreeMap, sync::Arc};
 
-use surrealdb::sql::{Block, Entry, Values};
+use surrealdb::sql::{Block, Entry, Literal, Values};
 
 use crate::{
     step_1_parse_sql::{parse_schema, FunctionParsed, SchemaParsed, ViewParsed},
-    ValueType,
+    Kind,
 };
 
 use super::{
@@ -15,20 +15,20 @@ use super::{
 
 #[derive(Debug)]
 pub struct SchemaState {
-    global_variables: BTreeMap<String, ValueType>,
+    global_variables: BTreeMap<String, Kind>,
     pub schema: SchemaParsed,
 }
 
 #[derive(Debug)]
 pub struct QueryState {
     pub schema: Arc<SchemaState>,
-    defined_variables: BTreeMap<String, ValueType>,
-    inferred_variables: BTreeMap<String, ValueType>,
-    stack_variables: Vec<BTreeMap<String, ValueType>>,
+    defined_variables: BTreeMap<String, Kind>,
+    inferred_variables: BTreeMap<String, Kind>,
+    stack_variables: Vec<BTreeMap<String, Kind>>,
 }
 
 impl QueryState {
-    pub fn new(schema: Arc<SchemaState>, defined_variables: BTreeMap<String, ValueType>) -> Self {
+    pub fn new(schema: Arc<SchemaState>, defined_variables: BTreeMap<String, Kind>) -> Self {
         Self {
             schema,
             defined_variables,
@@ -37,11 +37,11 @@ impl QueryState {
         }
     }
 
-    pub fn infer(&mut self, key: &str, value: ValueType) {
+    pub fn infer(&mut self, key: &str, value: Kind) {
         self.inferred_variables.insert(key.to_string(), value);
     }
 
-    pub fn get(&self, key: &str) -> Option<ValueType> {
+    pub fn get(&self, key: &str) -> Option<Kind> {
         let mut stack_variables = self.stack_variables.iter().rev();
         while let Some(frame) = stack_variables.next() {
             if let Some(value) = frame.get(key) {
@@ -72,7 +72,7 @@ impl QueryState {
         self.stack_variables.pop();
     }
 
-    pub fn set_local(&mut self, key: &str, value: ValueType) {
+    pub fn set_local(&mut self, key: &str, value: Kind) {
         self.stack_variables
             .last_mut()
             .unwrap()
@@ -96,7 +96,7 @@ impl QueryState {
         }
     }
 
-    pub fn extract_required_variables(&self) -> BTreeMap<String, ValueType> {
+    pub fn extract_required_variables(&self) -> BTreeMap<String, Kind> {
         let mut variables = BTreeMap::new();
 
         for (name, value) in self.defined_variables.iter() {
@@ -116,15 +116,15 @@ impl QueryState {
 #[derive(Debug, Clone)]
 pub struct InterpretedFunction {
     pub name: String,
-    pub args: Vec<(String, ValueType)>,
-    pub return_type: ValueType,
+    pub args: Vec<(String, Kind)>,
+    pub return_type: Kind,
 }
 
-pub type TableFields = BTreeMap<String, ValueType>;
+pub type TableFields = BTreeMap<String, Kind>;
 
 pub fn interpret_schema(
     schema: &str,
-    global_variables: BTreeMap<String, ValueType>,
+    global_variables: BTreeMap<String, Kind>,
 ) -> Result<SchemaState, anyhow::Error> {
     Ok(SchemaState {
         global_variables,
@@ -153,7 +153,7 @@ fn interpret_function_parsed(
     Ok(func)
 }
 
-fn get_block_return_type(block: Block, state: &mut QueryState) -> Result<ValueType, anyhow::Error> {
+fn get_block_return_type(block: Block, state: &mut QueryState) -> Result<Kind, anyhow::Error> {
     for entry in block.0.into_iter() {
         match entry {
             Entry::Output(output) => return get_return_statement_return_type(&output, state),
@@ -167,7 +167,7 @@ fn get_block_return_type(block: Block, state: &mut QueryState) -> Result<ValueTy
         }
     }
 
-    Ok(ValueType::Null)
+    Ok(Kind::Null)
 }
 
 fn get_view_table(
@@ -176,20 +176,17 @@ fn get_view_table(
     state: &mut QueryState,
 ) -> Result<TableFields, anyhow::Error> {
     match get_view_return_type(view, state)? {
-        ValueType::Object(mut fields) => {
+        Kind::Literal(Literal::Object(mut fields)) => {
             if view.what.0.len() != 1 {
                 return Err(anyhow::anyhow!("Expected single table in view"));
             }
 
             // add the implicit id field
-            fields.insert(
-                "id".into(),
-                ValueType::Record(vec![view.name.clone().into()]),
-            );
+            fields.insert("id".into(), Kind::Record(vec![view.name.clone().into()]));
 
             Ok(fields)
         }
-        ValueType::Either(..) => Err(anyhow::anyhow!(
+        Kind::Either(..) => Err(anyhow::anyhow!(
             "Multiple tables in view are not currently supported"
         )),
         _ => Err(anyhow::anyhow!("Expected object return type"))?,
@@ -199,7 +196,7 @@ fn get_view_table(
 pub fn get_view_return_type(
     view: &ViewParsed,
     state: &mut QueryState,
-) -> Result<ValueType, anyhow::Error> {
+) -> Result<Kind, anyhow::Error> {
     get_statement_fields(
         &Into::<Values>::into(&view.what),
         state,

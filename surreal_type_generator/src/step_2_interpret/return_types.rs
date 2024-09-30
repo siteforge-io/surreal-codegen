@@ -1,10 +1,10 @@
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, HashSet};
 
 use surrealdb::sql::{
-    Cast, Constant, Expression, Field, Fields, Ident, Idiom, Operator, Param, Part, Value,
+    Cast, Constant, Expression, Field, Fields, Ident, Idiom, Literal, Operator, Param, Part, Value,
 };
 
-use crate::{kind_to_return_type, ValueType};
+use crate::{kind, Kind};
 
 use super::{
     function::get_function_return_type,
@@ -19,9 +19,9 @@ pub fn get_statement_fields<F>(
     state: &mut QueryState,
     fields: Option<&Fields>,
     get_field_and_variables: F,
-) -> Result<ValueType, anyhow::Error>
+) -> Result<Kind, anyhow::Error>
 where
-    F: Fn(&mut BTreeMap<String, ValueType>, &mut QueryState) -> (),
+    F: Fn(&mut BTreeMap<String, Kind>, &mut QueryState) -> (),
 {
     let mut return_types = Vec::new();
     let mut used_tables = HashSet::new();
@@ -41,7 +41,7 @@ where
             get_field_and_variables(&mut table_fields, state);
             get_fields_return_values(fields, &table_fields, state)?
         } else {
-            ValueType::Object(table_fields.clone())
+            kind!(Obj table_fields.clone())
         };
 
         state.pop_stack_frame();
@@ -52,15 +52,15 @@ where
     if return_types.len() == 1 {
         Ok(return_types.pop().unwrap())
     } else {
-        Ok(ValueType::Either(return_types))
+        Ok(Kind::Either(return_types))
     }
 }
 
 pub fn get_fields_return_values(
     fields: &Fields,
-    field_types: &BTreeMap<String, ValueType>,
+    field_types: &BTreeMap<String, Kind>,
     state: &mut QueryState,
-) -> Result<ValueType, anyhow::Error> {
+) -> Result<Kind, anyhow::Error> {
     match fields {
         // returning a single value with `VALUE`
         Fields {
@@ -83,16 +83,16 @@ pub fn get_fields_return_values(
                 }
             }
 
-            return Ok(ValueType::Object(map));
+            return Ok(kind!(Obj map));
         }
     }
 }
 
 pub fn get_field_return_type(
     field: &Field,
-    field_types: &BTreeMap<String, ValueType>,
+    field_types: &BTreeMap<String, Kind>,
     state: &mut QueryState,
-) -> Result<Vec<(Idiom, ValueType)>, anyhow::Error> {
+) -> Result<Vec<(Idiom, Kind)>, anyhow::Error> {
     match field {
         Field::Single {
             expr,
@@ -122,15 +122,15 @@ pub fn get_field_return_type(
 
 pub fn get_value_return_type(
     expr: &Value,
-    field_types: &BTreeMap<String, ValueType>,
+    field_types: &BTreeMap<String, Kind>,
     state: &mut QueryState,
-) -> Result<ValueType, anyhow::Error> {
+) -> Result<Kind, anyhow::Error> {
     Ok(match expr {
         Value::Idiom(idiom) => get_field_from_paths(&idiom.0, &field_types, state)?,
         Value::Subquery(subquery) => {
             state.push_stack_frame();
 
-            state.set_local("parent", ValueType::Object(field_types.clone()));
+            state.set_local("parent", kind!(Obj field_types.clone()));
 
             let return_type = get_subquery_return_type(subquery, state)?;
 
@@ -139,27 +139,27 @@ pub fn get_value_return_type(
             return_type
         }
         Value::Param(param) => get_parameter_return_type(param, state)?,
-        // These constants could potentially be represented as actual constants in the return types
-        Value::Strand(_) => ValueType::String,
-        Value::Number(_) => ValueType::Number,
-        Value::Bool(_) => ValueType::Bool,
-        Value::Null => ValueType::Null,
-        Value::Datetime(_) => ValueType::Datetime,
-        Value::Duration(_) => ValueType::Duration,
-        Value::None => ValueType::Null,
+        // TODO: These constants could potentially be represented as actual constants in the return types
+        Value::Strand(_) => Kind::String,
+        Value::Number(_) => Kind::Number,
+        Value::Bool(_) => Kind::Bool,
+        Value::Null => Kind::Null,
+        Value::Datetime(_) => Kind::Datetime,
+        Value::Duration(_) => Kind::Duration,
+        Value::None => Kind::Null,
         Value::Function(func) => get_function_return_type(state, &func)?,
         Value::Expression(expr) => get_expression_return_type(expr, field_types, state)?,
         Value::Array(array) => {
-            let mut return_types = BTreeSet::new();
+            let mut return_types = HashSet::new();
             for value in &array.0 {
                 return_types.insert(get_value_return_type(value, field_types, state)?);
             }
             // If there is more than one type, we muse use Either
-            ValueType::Array(Box::new(match return_types.len() {
-                0 => ValueType::Never,
+            kind!(Arr match return_types.len() {
+                0 => Kind::Null,
                 1 => return_types.into_iter().next().unwrap(),
-                _ => ValueType::Either(return_types.into_iter().collect()),
-            }))
+                _ => Kind::Either(return_types.into_iter().collect()),
+            })
         }
         Value::Object(obj) => get_object_return_type(state, obj)?,
         Value::Constant(constant) => match constant {
@@ -183,24 +183,24 @@ pub fn get_value_return_type(
             | Constant::MathPi
             | Constant::MathSqrt2
             | Constant::MathTau
-            | Constant::TimeEpoch => ValueType::Number,
+            | Constant::TimeEpoch => Kind::Number,
             _ => anyhow::bail!("Unsupported constant: {:?}", constant),
         },
-        Value::Cast(box Cast { 0: kind, .. }) => kind_to_return_type(kind)?,
+        Value::Cast(box Cast { 0: kind, .. }) => kind.clone(),
         _ => anyhow::bail!("Unsupported value/expression: {}", expr),
     })
 }
 
 pub fn get_expression_return_type(
     expr: &Expression,
-    field_types: &BTreeMap<String, ValueType>,
+    field_types: &BTreeMap<String, Kind>,
     state: &mut QueryState,
-) -> Result<ValueType, anyhow::Error> {
+) -> Result<Kind, anyhow::Error> {
     Ok(match expr {
         // Unary
         Expression::Unary {
             o: Operator::Not, ..
-        } => ValueType::Bool,
+        } => Kind::Bool,
         Expression::Unary {
             o: Operator::Neg, ..
         } => anyhow::bail!("Unsupported unary operator"),
@@ -208,45 +208,45 @@ pub fn get_expression_return_type(
         // logical binary expressions
         Expression::Binary {
             o: Operator::And, ..
-        } => ValueType::Bool,
+        } => Kind::Bool,
         Expression::Binary {
             o: Operator::Or, ..
-        } => ValueType::Bool,
+        } => Kind::Bool,
         Expression::Binary {
             o: Operator::Equal, ..
-        } => ValueType::Bool,
+        } => Kind::Bool,
         Expression::Binary {
             o: Operator::NotEqual,
             ..
-        } => ValueType::Bool,
+        } => Kind::Bool,
         Expression::Binary {
             o: Operator::Exact, ..
-        } => ValueType::Bool,
+        } => Kind::Bool,
 
         // comparison binary expressions
         Expression::Binary {
             o: Operator::LessThan,
             ..
-        } => ValueType::Bool,
+        } => Kind::Bool,
         Expression::Binary {
             o: Operator::MoreThan,
             ..
-        } => ValueType::Bool,
+        } => Kind::Bool,
         Expression::Binary {
             o: Operator::LessThanOrEqual,
             ..
-        } => ValueType::Bool,
+        } => Kind::Bool,
         Expression::Binary {
             o: Operator::MoreThanOrEqual,
             ..
-        } => ValueType::Bool,
+        } => Kind::Bool,
         Expression::Binary {
             o: Operator::Like, ..
-        } => ValueType::Bool,
+        } => Kind::Bool,
         Expression::Binary {
             o: Operator::NotLike,
             ..
-        } => ValueType::Bool,
+        } => Kind::Bool,
 
         // TODO: arithmetic
         Expression::Binary {
@@ -258,10 +258,10 @@ pub fn get_expression_return_type(
             let r = get_value_return_type(r, field_types, state)?;
 
             match (&l, &r) {
-                (ValueType::Number, ValueType::Number) => ValueType::Number,
-                (ValueType::String, ValueType::String) => ValueType::String,
-                (ValueType::Datetime, ValueType::Datetime) => ValueType::Datetime,
-                (ValueType::Duration, ValueType::Duration) => ValueType::Duration,
+                (Kind::Number, Kind::Number) => Kind::Number,
+                (Kind::String, Kind::String) => Kind::String,
+                (Kind::Datetime, Kind::Datetime) => Kind::Datetime,
+                (Kind::Duration, Kind::Duration) => Kind::Duration,
                 _ => anyhow::bail!("Unsupported binary operation: {:?}", expr),
             }
         }
@@ -275,7 +275,7 @@ pub fn get_expression_return_type(
 pub fn get_parameter_return_type(
     param: &Param,
     state: &mut QueryState,
-) -> Result<ValueType, anyhow::Error> {
+) -> Result<Kind, anyhow::Error> {
     match state.get(&param.0 .0) {
         Some(return_type) => Ok(return_type.clone()),
         None => anyhow::bail!("Unknown parameter: {}", param),
@@ -284,9 +284,9 @@ pub fn get_parameter_return_type(
 
 pub fn get_field_from_paths(
     parts: &[Part],
-    field_types: &BTreeMap<String, ValueType>,
+    field_types: &BTreeMap<String, Kind>,
     state: &mut QueryState,
-) -> Result<ValueType, anyhow::Error> {
+) -> Result<Kind, anyhow::Error> {
     match parts.first() {
         Some(Part::Field(field_name)) => match field_types.get(field_name.as_str()) {
             Some(return_type) => match_return_type(return_type, &parts, field_types, state),
@@ -305,38 +305,38 @@ pub fn get_field_from_paths(
             let return_type = get_subquery_return_type(subquery, state)?;
             match_return_type(&return_type, &parts[1..], field_types, state)
         }
-        Some(Part::All) => Ok(ValueType::Object(field_types.clone())),
+        Some(Part::All) => Ok(kind!(Obj field_types.clone())),
         Some(_) => anyhow::bail!("Unsupported path: {}", Idiom::from(parts)),
         // Some(_) => anyhow::bail!("Unsupported path: {:#?}", parts),
         // We're returning an actual object
-        None => Ok(ValueType::Object(field_types.clone())),
+        None => Ok(kind!(Obj field_types.clone())),
     }
 }
 
 pub fn match_return_type(
-    return_type: &ValueType,
+    return_type: &Kind,
     parts: &[Part],
-    field_types: &BTreeMap<String, ValueType>,
+    field_types: &BTreeMap<String, Kind>,
     state: &mut QueryState,
-) -> Result<ValueType, anyhow::Error> {
+) -> Result<Kind, anyhow::Error> {
     let has_next_part = parts.len() > 1;
 
     match return_type {
-        ValueType::Object(nested_fields) => {
+        Kind::Literal(Literal::Object(nested_fields)) => {
             if has_next_part {
                 get_field_from_paths(&parts[1..], nested_fields, state)
             } else {
-                Ok(ValueType::Object(nested_fields.clone()))
+                Ok(kind!(Obj nested_fields.clone()))
             }
         }
-        ValueType::String => Ok(ValueType::String),
-        ValueType::Int => Ok(ValueType::Int),
-        ValueType::Float => Ok(ValueType::Float),
-        ValueType::Datetime => Ok(ValueType::Datetime),
-        ValueType::Duration => Ok(ValueType::Duration),
-        ValueType::Decimal => Ok(ValueType::Decimal),
-        ValueType::Bool => Ok(ValueType::Bool),
-        ValueType::Record(tables) => {
+        Kind::String => Ok(Kind::String),
+        Kind::Int => Ok(Kind::Int),
+        Kind::Float => Ok(Kind::Float),
+        Kind::Datetime => Ok(Kind::Datetime),
+        Kind::Duration => Ok(Kind::Duration),
+        Kind::Decimal => Ok(Kind::Decimal),
+        Kind::Bool => Ok(Kind::Bool),
+        Kind::Record(tables) => {
             if has_next_part {
                 let mut return_types = Vec::new();
                 for table in tables.iter() {
@@ -350,47 +350,48 @@ pub fn match_return_type(
                 if return_types.len() == 1 {
                     Ok(return_types.pop().unwrap())
                 } else {
-                    Ok(ValueType::Either(return_types))
+                    Ok(Kind::Either(return_types))
                 }
             } else {
-                Ok(ValueType::Record(tables.clone()))
+                Ok(Kind::Record(tables.clone()))
             }
         }
-        ValueType::Option(return_type) => Ok(ValueType::Option(Box::new(match_return_type(
+        Kind::Option(return_type) => Ok(kind!(Opt(match_return_type(
             return_type,
             &parts,
             field_types,
             state,
         )?))),
-        ValueType::Array(return_type) => match parts.first() {
-            Some(Part::Index(_)) => Ok(ValueType::Option(Box::new(match_return_type(
+        Kind::Array(return_type, ..) => match parts.first() {
+            Some(Part::Index(_)) => Ok(Kind::Option(Box::new(match_return_type(
                 return_type,
                 &parts,
                 field_types,
                 state,
             )?))),
-            Some(Part::All) => Ok(ValueType::Array(Box::new(match_return_type(
+            Some(Part::All) => Ok(kind!(Arr match_return_type(
                 return_type,
                 &parts,
                 field_types,
                 state,
-            )?))),
-            Some(Part::Field(_)) => Ok(ValueType::Array(Box::new(match_return_type(
+            )?)),
+            Some(Part::Field(_)) => Ok(kind!(Arr match_return_type(
                 return_type,
                 &parts[1..],
                 field_types,
                 state,
-            )?))),
+            )?)),
             Some(_) => anyhow::bail!("Unsupported path: {}", Idiom::from(parts)),
             None => anyhow::bail!(
                 "Tried to access array with no fields: {}",
                 Idiom::from(parts)
             ),
         },
-        ValueType::Null => Ok(ValueType::Null),
-        ValueType::Uuid => Ok(ValueType::Uuid),
-        ValueType::Any => Ok(ValueType::Any),
-        ValueType::Number => Ok(ValueType::Number),
+        Kind::Null => Ok(Kind::Null),
+        Kind::Uuid => Ok(Kind::Uuid),
+        Kind::Any => Ok(Kind::Any),
+        Kind::Number => Ok(Kind::Number),
+        Kind::Object => Ok(Kind::Object),
         _ => anyhow::bail!("Unsupported return type: {:?}", return_type),
     }
 }

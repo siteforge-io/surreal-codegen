@@ -7,3 +7,4 @@ edition = "2021"
 surreal_type_generator = { path = "../surreal_type_generator", version = "0.1.0" }
 anyhow = "1.0.66"
 clap = { version = "4.5.9", features = ["derive"] }
+colored = "2.1.0"
