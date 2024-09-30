@@ -1,4 +1,4 @@
-use surrealdb::sql::{statements::UpdateStatement, Fields, Output};
+use surrealdb::sql::{statements::UpdateStatement, Data, Fields, Output, Value, Values};
 
 use crate::{
     step_2_interpret::{get_statement_fields, schema::QueryState},
@@ -28,6 +28,11 @@ pub fn get_update_statement_return_type(
         )))?,
     };
 
+    match &update.data {
+        Some(content) => validate_data_type(state, &update.what, &content)?,
+        None => {}
+    }
+
     if is_only {
         Ok(return_type)
     } else {
@@ -44,11 +49,42 @@ fn get_update_fields(
         state.set_local("after", ValueType::Object(fields.clone()));
         state.set_local(
             "before",
-            ValueType::Either(vec![
-                ValueType::Object(fields.clone()),
-                ValueType::Null,
-            ]),
+            ValueType::Either(vec![ValueType::Object(fields.clone()), ValueType::Null]),
         );
         state.set_local("this", ValueType::Object(fields.clone()));
     })
+}
+
+fn validate_data_type(
+    state: &mut QueryState,
+    what: &Values,
+    data: &Data,
+) -> Result<(), anyhow::Error> {
+    match data {
+        Data::SetExpression(sets) => {
+            for set in sets.iter() {
+                // TODO
+
+                // let mut tables = vec![];
+
+                // for table in what.iter() {
+                //     let table_name = match &table {
+                //         Value::Table(table) => table.0.as_str(),
+                //         _ => anyhow::bail!("Expected table name"),
+                //     };
+                // }
+
+                // if tables.len() == 1 {
+                //     state.infer(param.0.as_str(), tables.pop().unwrap());
+                // } else if tables.len() > 1 {
+                //     state.infer(&param.0.as_str(), ValueType::Either(tables));
+                // }
+            }
+
+            Ok(())
+        }
+        _ => Err(anyhow::anyhow!(
+            "Unsupported data type for UPDATE statement"
+        ))?,
+    }
 }

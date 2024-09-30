@@ -14,6 +14,10 @@ You must have the rust toolchain installed, then run:
 ```sh
 cargo install --git https://github.com/siteforge-io/surreal-codegen.git
 ```
+Or, if you have cloned the repo:
+```sh
+cargo install --path surreal-codegen
+```
 
 ## Running `surreal-codegen`
 ```sh
@@ -162,6 +166,7 @@ You can also define global parameters in a `global.surql` file, which will be av
 - [ ] `UPDATE baz MERGE $foo` parameter inference
 - [ ] `UPDATE baz MERGE { foo: $bar }` parameter inference
 - [ ] `UPSERT baz SET foo = $bar` parameter inference
+- [x] `INSERT INTO baz $foo` parameter inference
 
 ### `SELECT` statements
 - [x] All fields
@@ -182,7 +187,7 @@ You can also define global parameters in a `global.surql` file, which will be av
 - [x] `RETRUN @statement_param` with `$before` field access
 
 ### `INSERT` statements
-- [ ] TODO
+- [X] TODO
 
 ### `RELATE` statements
 - [ ] TODO
@@ -255,7 +260,7 @@ You can also define global parameters in a `global.surql` file, which will be av
 #### Subquery expressions
 - [x] `SELECT` statements
 - [x] `DELETE` statements
-- [ ] `INSERT` statements
+- [X] `INSERT` statements
 - [x] `UPDATE` statements
 - [x] `CREATE` statements
 - [ ] `RELATE` statements

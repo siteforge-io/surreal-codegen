@@ -16,13 +16,10 @@ pub fn get_create_statement_return_type(
         Some(Output::After) | None => get_create_fields(create, state, None)?,
         Some(Output::Before | Output::Null) => ValueType::Null,
         Some(Output::None) => ValueType::Never,
-        Some(Output::Diff) => Err(anyhow::anyhow!("Create with returned diff not supported"))?,
+        Some(Output::Diff) => anyhow::bail!("Create with returned diff is not currently supported"),
         Some(Output::Fields(fields)) => get_create_fields(create, state, Some(fields))?,
         #[allow(unreachable_patterns)]
-        _ => Err(anyhow::anyhow!(format!(
-            "Unknown CREATE statement type: {}",
-            create
-        )))?,
+        _ => anyhow::bail!("Unknown CREATE statement type: {}", create),
     };
 
     match &create.data {
@@ -76,7 +73,7 @@ fn validate_data_type(
                         ));
                     }
                     None => anyhow::bail!(
-                        "Tried to create a record with an unknown or view table: {}",
+                        "Trying to create a record with an unknown or view table: {}",
                         table_name
                     ),
                 }

@@ -11,31 +11,31 @@ pub use step_3_codegen::QueryResult;
 
 #[derive(Debug, PartialEq, Clone, PartialOrd, Eq, Ord)]
 pub enum ValueType {
-    Any,
-    Never,
-    Unknown,
-    Null,
-    Uuid,
-    String,
-    Int,
-    Float,
-    Number,
-    Datetime,
-    Duration,
-    Decimal,
-    Bool,
-    Object(BTreeMap<String, ValueType>),
-    Array(Box<ValueType>),
-    Either(Vec<ValueType>),
-    Record(Vec<Table>),
-    Option(Box<ValueType>),
+    Any,                                 // yes
+    Never,                               // nope, could replace with null
+    Unknown,                             // nope, could replace with any or null
+    Null,                                // yes
+    Bool,                                // yees
+    Duration,                            // yes
+    Decimal,                             // yes
+    Datetime,                            // yes
+    String,                              // yes
+    Int,                                 // yes
+    Float,                               // yes
+    Number,                              // yes
+    Uuid,                                // yes
+    Object(BTreeMap<String, ValueType>), // yes, Literal::Object
+    Array(Box<ValueType>),               // yes, Literal::Array
+    Either(Vec<ValueType>),              // yes
+    Record(Vec<Table>),                  // yes
+    Option(Box<ValueType>),              // yes
 
     // Literals
-    StringLiteral(String),
-    NumberLiteral(Number),
-    DurationLiteral(Duration),
-    // TOOD: Sets
-    // TODO: Geometries
+    StringLiteral(String), // Literal::String
+    NumberLiteral(Number), // Literal::Number
+    DurationLiteral(Duration), // Literal::Duration
+                           // TOOD: Sets
+                           // TODO: Geometries
 }
 
 impl ValueType {
