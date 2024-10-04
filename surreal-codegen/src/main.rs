@@ -168,6 +168,8 @@ pub fn interpret() -> anyhow::Result<()> {
     );
     let output = step_3_codegen::typescript::generate_typescript_output(&types, &cli.header)?;
 
+    colored::control::unset_override();
+
     std::fs::write(&cli.output, output)?;
     println!(
         "{} {} '{}'",
