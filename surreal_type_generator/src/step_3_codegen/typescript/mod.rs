@@ -203,8 +203,8 @@ fn generate_type_definition(
             output.push_str("}");
             Ok(output)
         }
-        Kind::Literal(Literal::Array(array)) => {
-            todo!("Literal::Array not yet supported")
+        Kind::Literal(Literal::Array(..)) => {
+            anyhow::bail!("Literal::Array not yet supported")
             // let string = generate_type_definition(&**array, schema)?;
             // Ok(format!("Array<{}>", string))
         }

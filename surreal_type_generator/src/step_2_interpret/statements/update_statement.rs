@@ -60,9 +60,11 @@ fn validate_data_type(
     what: &Values,
     data: &Data,
 ) -> Result<(), anyhow::Error> {
+    let _ = state;
+    let _ = what;
     match data {
         Data::SetExpression(sets) => {
-            for set in sets.iter() {
+            for _set in sets.iter() {
                 // TODO
 
                 // let mut tables = vec![];

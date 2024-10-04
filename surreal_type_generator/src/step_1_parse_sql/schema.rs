@@ -6,8 +6,8 @@ use surrealdb::sql::{
         DefineFieldStatement, DefineFunctionStatement, DefineStatement, DefineTableStatement,
         IfelseStatement, ThrowStatement,
     },
-    Block, Entry, Expression, Fields, Function, Idiom, Kind, Literal, Param, Part, Query,
-    Statement, Tables, Value,
+    Block, Entry, Expression, Fields, Function, Idiom, Kind, Param, Part, Query, Statement, Tables,
+    Value,
 };
 
 use crate::kind;

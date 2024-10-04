@@ -119,6 +119,7 @@ pub fn interpret() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 fn type_info_to_string(type_info: &TypeData) -> String {
     let mut lines = Vec::new();
 

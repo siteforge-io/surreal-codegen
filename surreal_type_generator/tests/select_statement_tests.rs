@@ -14,7 +14,7 @@ DEFINE FIELD name ON user TYPE string;
     let QueryResult { return_types, .. } =
         surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
 
-    assert_eq_sorted!(return_types, vec![kind!(Opt(kind!(String)))]);
+    assert_eq_sorted!(return_types, vec![kind!(String)]);
 
     Ok(())
 }
@@ -83,9 +83,9 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![kind!(Opt(kind!({
+        vec![kind!({
             name: kind!(String)
-        })))]
+        })]
     );
 
     Ok(())
@@ -179,9 +179,9 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![kind!(Opt(kind!({
+        vec![kind!({
             foo: kind!(String)
-        })))]
+        })]
     );
 
     Ok(())
@@ -207,9 +207,9 @@ DEFINE FIELD name ON org TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![kind!(Opt(kind!({
+        vec![kind!({
             foo: kind!(String)
-        })))]
+        })]
     );
 
     Ok(())
@@ -230,10 +230,10 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![kind!(Opt(kind!({
+        vec![kind!({
             name: kind!(String),
             id: kind!(Record ["user"])
-        })))]
+        })]
     );
 
     Ok(())
@@ -273,7 +273,7 @@ DEFINE FIELD abc2 ON xyz TYPE option<string>;
 
     assert_eq_sorted!(
         return_types,
-        vec![kind!(Opt(kind!({
+        vec![kind!({
             name: kind!(Opt(kind!(String))),
             num: kind!(Opt(kind!(Int))),
             bool: kind!(Opt(kind!(Bool))),
@@ -284,7 +284,7 @@ DEFINE FIELD abc2 ON xyz TYPE option<string>;
                 abc: kind!(Opt(kind!(String))),
                 abc2: kind!(Opt(kind!(String)))
             })))
-        })))]
+        })]
     );
 
     Ok(())

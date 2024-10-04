@@ -21,14 +21,14 @@ DEFINE FIELD name ON user TYPE string;
 
     assert_eq_sorted!(
         return_types,
-        vec![kind!(Opt(kind!({
+        vec![kind!({
             "name": kind!(String),
             "subquery": kind!([kind!({
                 "name": kind!(String)
             })]),
             "(DELETE user)": kind!([kind!(Null)]),
             "(UPDATE user SET name = \'John\' RETURN NONE)": kind!([kind!(Null)])
-        })))]
+        })]
     );
 
     Ok(())

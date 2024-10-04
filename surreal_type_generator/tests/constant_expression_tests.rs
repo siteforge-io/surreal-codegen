@@ -22,14 +22,14 @@ DEFINE TABLE foo SCHEMAFULL;
 
     assert_eq_sorted!(
         return_types,
-        vec![kind!(Opt(kind!({
+        vec![kind!({
             "123": kind!(Number),
             "false": kind!(Bool),
             "foo": kind!(String),
             "true": kind!(Bool),
             "NONE": kind!(Null),
             "NULL": kind!(Null)
-        })))]
+        })]
     );
 
     Ok(())

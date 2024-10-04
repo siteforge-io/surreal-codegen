@@ -11,7 +11,8 @@ pub fn get_select_statement_return_type(
     state: &mut QueryState,
 ) -> Result<Kind, anyhow::Error> {
     if select.only {
-        Ok(kind!(Opt(get_select_fields(select, state)?)))
+        // only will error if the select statement returns nothing
+        Ok(get_select_fields(select, state)?)
     } else {
         Ok(kind!(Arr get_select_fields(select, state)?))
     }
