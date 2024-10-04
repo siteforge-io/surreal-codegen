@@ -1,9 +1,19 @@
-use crate::{kind, Kind};
+use crate::{kind, utils::printing::indent, Kind, PrettyString};
 use surrealdb::sql::{Literal, Table};
 
 use crate::step_2_interpret::SchemaState;
 
 use super::TypeData;
+
+pub fn format_comment(string: &str) -> String {
+    let mut lines = Vec::new();
+    lines.push("/**".into());
+    for line in string.lines() {
+        lines.push(format!(" * {}", line));
+    }
+    lines.push(" */".into());
+    lines.join("\n")
+}
 
 pub fn generate_typescript_output(
     types: &[TypeData],
@@ -11,42 +21,10 @@ pub fn generate_typescript_output(
 ) -> Result<String, anyhow::Error> {
     let mut output = String::new();
 
+    colored::control::set_override(false);
+
     output.push_str(header);
-    output.push_str("\n");
-
-    for TypeData {
-        schema,
-        name,
-        statements,
-        return_type,
-        variables,
-    } in types
-    {
-        output.push_str(&format!(
-            "export const {}Query = {}\n",
-            name,
-            serde_json::to_string(&statements.to_string())?
-        ));
-        output.push_str(&format!("export type {}Result = [{}]\n", name, {
-            let mut output = String::new();
-            for return_type in return_type {
-                output.push_str(&generate_type_definition(return_type, schema)?);
-                output.push_str(",");
-            }
-            output
-        }));
-
-        if variables.len() > 0 {
-            output.push_str(&format!("export type {}Variables = ", name));
-
-            output.push_str(&generate_type_definition(
-                &kind!(Obj variables.clone()),
-                schema,
-            )?);
-
-            output.push_str("\n");
-        }
-    }
+    output.push_str("\n\n");
 
     output.push_str(&format!("export type Queries = {{\n{}}}\n", {
         let mut output = String::new();
@@ -69,10 +47,90 @@ pub fn generate_typescript_output(
         output
     },));
 
+    for TypeData {
+        schema,
+        name,
+        statements,
+        return_type,
+        variables,
+    } in types
+    {
+        output.push_str(&format_comment(&format!(
+            "## {} query results:\n\n```surql\n{}\n```",
+            name,
+            &return_type
+                .iter()
+                .enumerate()
+                .map(|(i, x)| {
+                    format!(
+                        "/// ---------------------\n{}{}:\n/// ---------------------\n{}",
+                        "/// Result ",
+                        i,
+                        x.pretty_string()
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("\n\n"),
+        )));
+        output.push_str("\n");
+        output.push_str(&format!(
+            "export const {}Query = {}\n",
+            name,
+            serde_json::to_string(&statements.to_string())?
+        ));
+        output.push_str(&format!("export type {}Result = [\n{}\n]\n", name, {
+            let mut lines = Vec::new();
+            for result in return_type {
+                lines.push(generate_type_definition(result, schema)?);
+            }
+            indent(&lines.join(",\n"))
+        }));
+
+        if variables.len() > 0 {
+            output.push_str(&format!("export type {}Variables = ", name));
+
+            output.push_str(&generate_type_definition(
+                &kind!(Obj variables.clone()),
+                schema,
+            )?);
+
+            output.push_str("\n");
+        }
+    }
+
     output.push_str(r#"
 
 export type Variables<Q extends keyof Queries> = Queries[Q]["variables"] extends never ? [] : [Queries[Q]["variables"]]
 
+/**
+ * A Surreal client with typed queries from codegen.
+ *
+ * Usage:
+ *
+ * ```surql
+ * // [your_schema_path].surql
+ * DEFINE TABLE user SCHEMAFULL;
+ * DEFINE FIELD name ON user TYPE string;
+ * ```
+ * ```surql
+ * // queries/get_user.surql
+ * SELECT * FROM ONLY $auth;
+ * ```
+ *
+ * ```ts
+ * // usage example
+ * import { TypedSurreal, GetUserQuery } from "[YOUR_OUTPUT_PATH].ts"
+ * const db = new TypedSurreal()
+ *
+ * await db.connect(...)
+ *
+ * const [
+ *     user // { id: RecordId<"user">, name: string }
+ * ] = await surreal.typed(GetUserQuery)
+ *
+ * console.log(user) // { id: 1, name: "John Doe" }
+ * ```
+ */
 export class TypedSurreal extends Surreal {
     typed<Q extends keyof Queries>(query: Q, ...rest: Variables<Q>): Promise<Queries[Q]["result"]> {
         return this.query(query, rest[0])
@@ -112,10 +170,16 @@ fn generate_type_definition(
             let mut output = String::new();
             output.push_str("(\n");
 
+            let mut lines = Vec::new();
+
             for return_type in vec.into_iter() {
-                output.push_str("|");
-                output.push_str(&generate_type_definition(return_type, schema)?);
+                lines.push(format!(
+                    "| {}",
+                    generate_type_definition(return_type, schema)?
+                ));
             }
+
+            output.push_str(&indent(&lines.join("\n")));
 
             output.push_str("\n)");
             Ok(output)
@@ -151,15 +215,17 @@ fn generate_type_definition(
         Kind::Literal(Literal::Number(number)) => Ok(number.to_string()),
         Kind::Literal(Literal::Object(map)) => {
             let mut output = String::new();
-            output.push_str("{");
+            output.push_str("{\n");
 
             // sort alphabetically for deterministic output
             let mut map: Vec<(_, _)> = map.into_iter().collect();
             map.sort_by_key(|x| x.0.to_string());
 
+            let mut key_string = Vec::new();
+
             for (key, value) in map {
-                output.push_str(&format!(
-                    "{}{}:{},",
+                key_string.push(format!(
+                    "{}{}: {},\n",
                     key,
                     match value {
                         Kind::Option(_) => "?",
@@ -172,7 +238,10 @@ fn generate_type_definition(
                 ));
             }
 
-            output.push_str("}");
+            let key_string = indent(&key_string.join(""));
+
+            output.push_str(&key_string);
+            output.push_str("\n}");
             Ok(output)
         }
         Kind::Literal(Literal::Array(..)) => {

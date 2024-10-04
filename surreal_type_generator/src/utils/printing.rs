@@ -93,7 +93,7 @@ impl PrettyString for Kind {
     }
 }
 
-fn indent(str: &str) -> String {
+pub fn indent(str: &str) -> String {
     let mut lines = Vec::new();
     for line in str.lines() {
         lines.push(format!("    {}", line));

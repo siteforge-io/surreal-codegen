@@ -75,20 +75,19 @@ surreal-codegen \
 ```ts
 import { TypedSurreal, CreateUserQuery } from "./queries"
 
-const db = new TypedSurreal({
-  ...
-});
+const db = new TypedSurreal()
 
+await db.connect(...)
 /*
   Result is typed as CreateUserResult from the generated types.ts file
 */
-const result = await db.typed(CreateUserQuery, {
+const [created_users] = await db.typed(CreateUserQuery, {
   user: {
     name: "John Doe",
     email: "john@doe.com",
     password: "123456",
   } // can also be an array of users
-});
+})
 ```
 
 ## Typing parameters
