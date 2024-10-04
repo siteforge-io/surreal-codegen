@@ -50,7 +50,6 @@ fn fetch_latest_version() -> Option<Version> {
 }
 
 pub fn main() {
-    check_latest_version();
     match interpret() {
         Ok(_) => {}
         Err(err) => {
@@ -59,9 +58,11 @@ pub fn main() {
                 " ✕ Error: ".on_bright_red().bright_white().bold(),
                 err.to_string()
             );
+            check_latest_version();
             std::process::exit(1);
         }
     }
+    check_latest_version();
 }
 
 fn check_latest_version() {
