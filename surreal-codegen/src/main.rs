@@ -66,6 +66,7 @@ pub fn main() {
 }
 
 fn check_latest_version() {
+    println!("\n");
     if let Some(latest_version) = fetch_latest_version() {
         let current_version = Version::parse(CURRENT_VERSION).unwrap();
         if latest_version > current_version {
@@ -73,10 +74,11 @@ fn check_latest_version() {
                 "{}",
                 format!(
                     "{} A new version of {} is available: {}",
-                    "➜".bright_yellow().bold(),
-                    "surreal-codegen".bright_blue(),
-                    latest_version.to_string().bright_yellow()
+                    "⚠".white().bold(),
+                    "surreal-codegen".bright_white(),
+                    latest_version.to_string().bright_white()
                 )
+                .white()
                 .on_red()
             );
             println!(
@@ -94,7 +96,7 @@ fn check_latest_version() {
                 "{}",
                 format!(
                     "{} You're using the latest version of surreal-codegen: {}",
-                    "➜".bright_green().bold(),
+                    "✓".bright_green().bold(),
                     CURRENT_VERSION.bright_green()
                 )
             );
@@ -102,7 +104,7 @@ fn check_latest_version() {
     } else {
         println!(
             "{} Failed to fetch latest {} version from GitHub",
-            "➜".red().bold(),
+            "✗".red().bold(),
             "surreal-codegen".bright_cyan()
         );
     }
