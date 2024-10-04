@@ -123,7 +123,7 @@ You can also define global parameters in a `global.surql` file, which will be av
 ```
 
 # Notes
-- We only currently support SCHEMAFULL tables so far, but we are working on supporting other table types.
+- We only currently support `SCHEMAFULL` tables so far, but we are working on supporting other table types.
 
 
 # Features Supported
@@ -290,3 +290,11 @@ You can also define global parameters in a `global.surql` file, which will be av
 - [ ] `LET`
 - [ ] `ABORT`
 - [ ] `THROW`
+
+## Contributing
+
+We welcome contributions to this project, please see our [Contributing Guide](CONTRIBUTING.md) for more information.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE.md).
