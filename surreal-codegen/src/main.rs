@@ -1,11 +1,14 @@
 use clap::Parser;
 use colored::Colorize;
+use reqwest;
+use semver::Version;
 use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 use surreal_type_generator::{
     step_1_parse_sql, step_2_interpret,
-    step_3_codegen::{self, typescript::TypeData},
-    Kind, Literal,
+    step_3_codegen::{self},
 };
+
+const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Parser)]
 struct Cli {
@@ -31,7 +34,23 @@ struct Cli {
     header: String,
 }
 
+fn fetch_latest_version() -> Option<Version> {
+    let client = reqwest::blocking::Client::new();
+    let resp = client
+        .get("https://raw.githubusercontent.com/siteforge-io/surreal-codegen/main/surreal-codegen/Cargo.toml")
+        .header("User-Agent", "surreal-codegen")
+        .send()
+        .ok()?;
+
+    let toml_content = resp.text().ok()?;
+    let parsed_toml: toml::Value = toml::from_str(&toml_content).ok()?;
+    let version_str = parsed_toml.get("package")?.get("version")?.as_str()?;
+
+    Version::parse(version_str).ok()
+}
+
 pub fn main() {
+    check_latest_version();
     match interpret() {
         Ok(_) => {}
         Err(err) => {
@@ -42,6 +61,49 @@ pub fn main() {
             );
             std::process::exit(1);
         }
+    }
+}
+
+fn check_latest_version() {
+    if let Some(latest_version) = fetch_latest_version() {
+        let current_version = Version::parse(CURRENT_VERSION).unwrap();
+        if latest_version > current_version {
+            println!(
+                "{}",
+                format!(
+                    "{} A new version of {} is available: {}",
+                    "➜".bright_yellow().bold(),
+                    "surreal-codegen".bright_blue(),
+                    latest_version.to_string().bright_yellow()
+                )
+                .on_red()
+            );
+            println!(
+                "   You're currently using version {}",
+                CURRENT_VERSION.bright_yellow()
+            );
+            println!(
+                "   Update with: {}",
+                "cargo install --force --git https://github.com/siteforge-io/surreal-codegen.git"
+                    .bright_cyan()
+            );
+            println!();
+        } else {
+            println!(
+                "{}",
+                format!(
+                    "{} You're using the latest version of surreal-codegen: {}",
+                    "➜".bright_green().bold(),
+                    CURRENT_VERSION.bright_green()
+                )
+            );
+        }
+    } else {
+        println!(
+            "{} Failed to fetch latest {} version from GitHub",
+            "➜".red().bold(),
+            "surreal-codegen".bright_cyan()
+        );
     }
 }
 
@@ -81,22 +143,19 @@ pub fn interpret() -> anyhow::Result<()> {
             "Interpreting".white(),
             file_name.bright_green()
         );
-        let type_info =
-            match step_3_codegen::typescript::generate_type_info(&file_name, &query, state.clone())
-            {
-                Ok(type_info) => type_info,
-                Err(err) => {
-                    eprintln!(
-                        "{} {}\n{}",
-                        " ✕ Error Parsing: ".on_bright_red().bright_white().bold(),
-                        file_name.bright_green(),
-                        err.to_string()
-                    );
-                    std::process::exit(1);
-                }
-            };
-
-        // println!("{}", type_info_to_string(&type_info));
+        let type_info = match step_3_codegen::generate_type_info(&file_name, &query, state.clone())
+        {
+            Ok(type_info) => type_info,
+            Err(err) => {
+                eprintln!(
+                    "{} {}\n{}",
+                    " ✕ Error Parsing: ".on_bright_red().bright_white().bold(),
+                    file_name.bright_green(),
+                    err.to_string()
+                );
+                std::process::exit(1);
+            }
+        };
 
         types.push(type_info);
     }
@@ -117,102 +176,4 @@ pub fn interpret() -> anyhow::Result<()> {
     );
 
     Ok(())
-}
-
-#[allow(dead_code)]
-fn type_info_to_string(type_info: &TypeData) -> String {
-    let mut lines = Vec::new();
-
-    for (i, return_type) in type_info.return_type.iter().enumerate() {
-        lines.push(format!(
-            "{}{}",
-            format!("-- Query Result {} --\n", i).white(),
-            return_type.pretty_string(),
-            // indent(&return_type.pretty_string())
-        ));
-    }
-
-    lines.join("\n")
-}
-
-pub trait PrettyString {
-    fn pretty_string(&self) -> String;
-}
-
-impl PrettyString for Kind {
-    fn pretty_string(&self) -> String {
-        match self {
-            Kind::Record(tables) => format!(
-                "{}{}{}{}",
-                "record".yellow(),
-                "<".white(),
-                tables
-                    .iter()
-                    .map(|table| table.to_string().bright_magenta().to_string())
-                    .collect::<Vec<_>>()
-                    .join(" | "),
-                ">".white()
-            ),
-            Kind::Literal(Literal::Object(fields)) => {
-                let mut lines = Vec::new();
-
-                for (key, value) in fields {
-                    lines.push(format!(
-                        "{}{} {}",
-                        key.bright_cyan(),
-                        ":".white(),
-                        value.pretty_string()
-                    ));
-                }
-
-                format!(
-                    "{}{}{}",
-                    "{\n".white(),
-                    indent(&lines.join(",\n")),
-                    "\n}".white(),
-                )
-            }
-            Kind::Array(kind, ..) => format!(
-                "{}{}{}{}",
-                "array".yellow(),
-                "<".white(),
-                kind.pretty_string(),
-                ">".white()
-            ),
-            Kind::Option(kind) => format!(
-                "{}{}{}{}",
-                "option".yellow(),
-                "<".white(),
-                kind.pretty_string(),
-                ">".white()
-            ),
-            Kind::Either(types) => types
-                .iter()
-                .map(|t| t.pretty_string())
-                .collect::<Vec<_>>()
-                .join(&" | ".white()),
-
-            // Kind::Any => "any".to_string(),
-            // Kind::Null => "null".to_string(),
-            // Kind::Bool => "boolean".to_string(),
-            // Kind::Duration => "duration".to_string(),
-            // Kind::Decimal => "decimal".to_string(),
-            // Kind::Datetime => "datetime".to_string(),
-            // Kind::String => "string".to_string(),
-            // Kind::Int => "int".to_string(),
-            // Kind::Float => "float".to_string(),
-            // Kind::Number => "number".to_string(),
-            // Kind::Uuid => "uuid".to_string(),
-            // Kind::Object => format!("object"),
-            kind => kind.to_string().yellow().to_string(),
-        }
-    }
-}
-
-fn indent(str: &str) -> String {
-    let mut lines = Vec::new();
-    for line in str.lines() {
-        lines.push(format!("    {}", line));
-    }
-    lines.join("\n")
 }

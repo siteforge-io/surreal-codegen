@@ -1,37 +1,9 @@
 use crate::{kind, Kind};
-use std::{collections::BTreeMap, sync::Arc};
-use surrealdb::sql::{Literal, Statements, Table};
+use surrealdb::sql::{Literal, Table};
 
 use crate::step_2_interpret::SchemaState;
 
-pub struct TypeData {
-    pub schema: Arc<SchemaState>,
-    pub name: String,
-    pub statements: Statements,
-    pub return_type: Vec<Kind>,
-    pub variables: BTreeMap<String, Kind>,
-}
-
-pub fn generate_type_info(
-    file_name: &str,
-    query: &str,
-    state: Arc<SchemaState>,
-) -> Result<TypeData, anyhow::Error> {
-    let result = crate::step_3_codegen::output_query_type(query, state.clone())?;
-    let camel_case_file_name = filename_to_camel_case(file_name)?;
-
-    Ok(TypeData {
-        schema: state.clone(),
-        name: camel_case_file_name,
-        return_type: result.return_types,
-        statements: {
-            let mut s = Statements::default();
-            s.0 = result.statements;
-            s
-        },
-        variables: result.variables,
-    })
-}
+use super::TypeData;
 
 pub fn generate_typescript_output(
     types: &[TypeData],
@@ -138,14 +110,14 @@ fn generate_type_definition(
         }
         Kind::Either(vec) => {
             let mut output = String::new();
-            output.push_str("(");
+            output.push_str("(\n");
 
             for return_type in vec.into_iter() {
                 output.push_str("|");
                 output.push_str(&generate_type_definition(return_type, schema)?);
             }
 
-            output.push_str(")");
+            output.push_str("\n)");
             Ok(output)
         }
         Kind::Record(tables) => {
@@ -212,30 +184,4 @@ fn generate_type_definition(
         // Catch all
         kind => unimplemented!("Kind {:?} not yet supported", kind),
     }
-}
-
-fn filename_to_camel_case(filename: &str) -> Result<String, anyhow::Error> {
-    let parts: Vec<&str> = filename.split('.').collect();
-    if parts.len() != 2 {
-        return Err(anyhow::anyhow!(
-            "Filename must be of the form `name.extension`"
-        ));
-    }
-
-    let name_part = parts[0];
-    let mut camel_case_name = String::new();
-    let mut new_word = true;
-
-    for c in name_part.chars() {
-        if c == '_' {
-            new_word = true;
-        } else if new_word {
-            camel_case_name.push(c.to_uppercase().next().unwrap());
-            new_word = false;
-        } else {
-            camel_case_name.push(c);
-        }
-    }
-
-    Ok(camel_case_name)
 }

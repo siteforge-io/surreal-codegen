@@ -9,6 +9,7 @@ surrealdb = { version = "2.0.3", features = ["kv-mem"] }
 # surrealdb = { git = "https://github.com/surrealdb/surrealdb.git", rev = "3daa84ca8988a303decdef09ca5252b53331143a" }
 anyhow = "1.0.83"
 serde_json = "1.0.117"
+colored = "2.1.0"
 
 # add pretty assertions but only for tests
 [dev-dependencies]

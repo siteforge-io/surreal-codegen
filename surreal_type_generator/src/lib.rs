@@ -6,6 +6,10 @@ pub mod step_3_codegen;
 pub use step_3_codegen::QueryResult;
 pub use surrealdb::sql::Kind;
 pub use surrealdb::sql::{Duration, Literal, Number};
+pub mod utils;
+
+pub use utils::printing::type_info_to_string;
+pub use utils::printing::PrettyString;
 
 #[macro_export]
 macro_rules! var_map {
@@ -124,107 +128,3 @@ macro_rules! kind_array {
         $crate::Kind::Array(Box::new(kind!($kind)), None)
     };
 }
-
-// use std::collections::BTreeMap;
-// use surrealdb::sql::{Duration, Kind, Literal, Number, Table};
-
-// #[derive(Debug, PartialEq, Clone, PartialOrd, Eq, Ord)]
-// pub enum Kind {
-//     Any,                                 // yes
-//     Never,                               // nope, could replace with null
-//     Null,                                // yes
-//     Bool,                                // yees
-//     Duration,                            // yes
-//     Decimal,                             // yes
-//     Datetime,                            // yes
-//     String,                              // yes
-//     Int,                                 // yes
-//     Float,                               // yes
-//     Number,                              // yes
-//     Uuid,                                // yes
-//     Object(BTreeMap<String, Kind>), // yes, Literal::Object
-//     Array(Box<Kind>),               // yes, Literal::Array
-//     Either(Vec<Kind>),              // yes
-//     Record(Vec<Table>),                  // yes
-//     Option(Box<Kind>),              // yes
-
-//     // Literals
-//     StringLiteral(String), // Literal::String
-//     NumberLiteral(Number), // Literal::Number
-//     DurationLiteral(Duration), // Literal::Duration
-//                            // TOOD: Sets
-//                            // TODO: Geometries
-// }
-
-// impl Kind {
-//     pub fn expect_option(self) -> Result<Kind, anyhow::Error> {
-//         match self {
-//             Kind::Option(return_type) => Ok(*return_type),
-//             _ => anyhow::bail!("Expected an option type, but got: {:?}", self),
-//         }
-//     }
-
-//     pub fn is_optional(&self) -> bool {
-//         match self {
-//             Kind::Option(_) => true,
-//             _ => false,
-//         }
-//     }
-// }
-
-// pub fn kind_to_return_type(kind: &Kind) -> Result<Kind, anyhow::Error> {
-//     Ok(match kind {
-//         Kind::Any => Kind::Any,
-//         Kind::Null => Kind::Null,
-//         Kind::String => Kind::String,
-//         Kind::Int => Kind::Int,
-//         Kind::Float => Kind::Float,
-//         Kind::Datetime => Kind::Datetime,
-//         Kind::Duration => Kind::Duration,
-//         Kind::Decimal => Kind::Decimal,
-//         Kind::Bool => Kind::Bool,
-//         Kind::Number => Kind::Number,
-//         Kind::Record(tables) => Kind::Record(tables.clone()),
-//         Kind::Option(kind) => Kind::Option(Box::new(kind_to_return_type(kind)?)),
-//         Kind::Uuid => Kind::Uuid,
-//         Kind::Array(kind, _) => Kind::Array(Box::new(kind_to_return_type(kind)?)),
-//         Kind::Object => Kind::Any,
-//         Kind::Literal(literal) => match literal {
-//             Literal::String(s) => Kind::StringLiteral(s.0.clone()),
-//             Literal::Number(n) => Kind::NumberLiteral(n.clone()),
-//             Literal::Duration(d) => Kind::DurationLiteral(d.clone()),
-//             Literal::Object(obj) => {
-//                 let mut fields = BTreeMap::new();
-//                 for (key, value) in obj {
-//                     fields.insert(key.into(), kind_to_return_type(value)?);
-//                 }
-//                 Kind::Object(fields)
-//             }
-//             Literal::Array(values) => {
-//                 let mut eithers = Vec::new();
-//                 for value in values {
-//                     eithers.push(kind_to_return_type(value)?);
-//                 }
-//                 if eithers.len() == 1 {
-//                     Kind::Array(Box::new(eithers.into_iter().next().unwrap()))
-//                 } else {
-//                     Kind::Array(Box::new(Kind::Either(eithers)))
-//                 }
-//             }
-//             _ => anyhow::bail!("Unknown literal: {:?}", literal),
-//         },
-//         Kind::Point => anyhow::bail!("Points are not yet supported"),
-//         Kind::Bytes => anyhow::bail!("Bytes is not yet supported"),
-//         Kind::Geometry(_) => anyhow::bail!("Geometry is not yet supported"),
-//         Kind::Set(kind, _) => Kind::Array(Box::new(kind_to_return_type(kind)?)),
-//         Kind::Either(kinds) => {
-//             let mut types = Vec::new();
-//             for kind in kinds {
-//                 types.push(kind_to_return_type(kind)?);
-//             }
-//             Kind::Either(types)
-//         }
-//         #[allow(unreachable_patterns)]
-//         _ => anyhow::bail!("Unknown kind: {:?}", kind),
-//     })
-// }
