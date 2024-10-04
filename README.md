@@ -5,7 +5,7 @@
 
 # Installation
 > [!WARNING]
-> We haven't currently setup a build automation system, so you must build the project yourself.
+> We haven't currently setup a build automation system, so you must build via the manual installation instructions below.
 
 
 ## Manual Installation
