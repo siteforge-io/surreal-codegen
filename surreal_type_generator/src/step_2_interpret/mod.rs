@@ -59,6 +59,6 @@ fn get_subquery_return_type(
         Subquery::Update(update) => get_update_statement_return_type(update, state),
         Subquery::Upsert(upsert) => get_upsert_statement_return_type(upsert, state),
         Subquery::Value(value) => get_value_return_type(value, &BTreeMap::new(), state),
-        _ => Err(anyhow::anyhow!("Unsupported subquery type: `{}`", subquery)),
+        _ => anyhow::bail!("Unsupported subquery type: `{}`", subquery),
     }
 }

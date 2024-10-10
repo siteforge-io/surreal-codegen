@@ -81,7 +81,7 @@ impl QueryState {
 
     pub fn table_select_fields(&mut self, name: &str) -> Result<TableFields, anyhow::Error> {
         match self.schema.schema.tables.get(name) {
-            Some(table) => Ok(table.compute_select_fields()),
+            Some(table) => Ok(table.compute_select_fields()?),
             None => match self.schema.schema.views.get(name).cloned() {
                 Some(view) => Ok(get_view_table(&view, self)?),
                 None => anyhow::bail!("Unknown table: {}", name),

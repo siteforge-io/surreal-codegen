@@ -61,7 +61,7 @@ pub fn merge_into_map_recursively(
                                 &parts[1..],
                                 match return_type {
                                     Kind::Option(return_type) => *return_type,
-                                    _ => panic!("Expected Option, got {:?}", return_type),
+                                    _ => anyhow::bail!("Expected Option, got {:?}", return_type),
                                 },
                             )?
                         }

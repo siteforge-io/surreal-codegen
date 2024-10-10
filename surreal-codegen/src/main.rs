@@ -50,7 +50,7 @@ fn fetch_latest_version() -> Option<Version> {
 }
 
 pub fn main() {
-    match interpret() {
+    let result = std::panic::catch_unwind(|| match interpret() {
         Ok(_) => {}
         Err(err) => {
             eprintln!(
@@ -58,11 +58,22 @@ pub fn main() {
                 " ✕ Error: ".on_bright_red().bright_white().bold(),
                 err.to_string()
             );
-            check_latest_version();
-            std::process::exit(1);
+
+            println!("{}\n{}",
+                "If you expected this query to work, please file an issue at:".white()
+                "https://github.com/siteforge-io/surreal-codegen/issues".bright_cyan()
+            );
+        }
+    });
+
+    check_latest_version();
+
+    match result {
+        Ok(_) => {}
+        Err(e) => {
+            panic!("Unexpected panic: {:#?}", e);
         }
     }
-    check_latest_version();
 }
 
 fn check_latest_version() {
@@ -149,15 +160,12 @@ pub fn interpret() -> anyhow::Result<()> {
         let type_info = match step_3_codegen::generate_type_info(&file_name, &query, state.clone())
         {
             Ok(type_info) => type_info,
-            Err(err) => {
-                eprintln!(
-                    "{} {}\n{}",
-                    " ✕ Error Parsing: ".on_bright_red().bright_white().bold(),
-                    file_name.bright_green(),
-                    err.to_string()
-                );
-                std::process::exit(1);
-            }
+            Err(err) => anyhow::bail!(
+                "{} {}\n{}",
+                " ✕ Error Parsing: ".on_bright_red().bright_white().bold(),
+                file_name.bright_green(),
+                err.to_string(),
+            ),
         };
 
         types.push(type_info);

@@ -19,6 +19,6 @@ pub fn get_return_statement_return_type(
             what: _,
             fetch: Some(_),
             ..
-        } => unimplemented!(),
+        } => anyhow::bail!("TODO: Support fetch fields"),
     })
 }

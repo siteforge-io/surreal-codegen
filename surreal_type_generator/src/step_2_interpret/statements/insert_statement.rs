@@ -56,7 +56,7 @@ fn validate_data_type(
 
             match state.schema.schema.tables.get(&table_name) {
                 Some(table) => {
-                    let insert_fields = kind!(Obj table.compute_create_fields());
+                    let insert_fields = kind!(Obj table.compute_create_fields()?);
 
                     // can insert multiple or a single record
                     tables.push(kind!(Either[kind!(Arr insert_fields.clone()), insert_fields]));

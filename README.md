@@ -119,7 +119,7 @@ You can also define global parameters in a `global.surql` file, which will be av
 
 `./queries/globals.surql`
 ```sql
-<record<user>> $user;
+<record<user>> $auth;
 ```
 
 # Notes

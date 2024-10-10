@@ -53,7 +53,7 @@ pub fn validate_data_type(
                 let table_name = get_value_table(table, state)?;
                 match state.schema.schema.tables.get(&table_name) {
                     Some(table) => {
-                        let create_fields = kind!(Obj table.compute_create_fields());
+                        let create_fields = kind!(Obj table.compute_create_fields()?);
                         tables
                             .push(kind!(Either [create_fields.clone(), kind!(Arr create_fields)]));
                     }

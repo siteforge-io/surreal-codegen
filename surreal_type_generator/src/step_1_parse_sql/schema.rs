@@ -61,8 +61,8 @@ pub struct FieldParsed {
 }
 
 impl FieldParsed {
-    pub fn compute_create_type(&self) -> Kind {
-        match &self.field_type {
+    pub fn compute_create_type(&self) -> anyhow::Result<Kind> {
+        Ok(match &self.field_type {
             FieldType::Simple => match self.is_optional || self.has_default {
                 true => Kind::Option(Box::new(self.return_type.clone())),
                 false => self.return_type.clone(),
@@ -71,7 +71,7 @@ impl FieldParsed {
                 let mut fields = BTreeMap::new();
                 for (key, value) in obj {
                     if !value.has_override_value {
-                        fields.insert(key.clone(), value.compute_create_type());
+                        fields.insert(key.clone(), value.compute_create_type()?);
                     }
                 }
 
@@ -82,12 +82,12 @@ impl FieldParsed {
                     false => fields,
                 }
             }
-            _ => todo!(),
-        }
+            _ => anyhow::bail!("TODO: Unsupported field type: {:?}", self.field_type),
+        })
     }
 
-    pub fn compute_select_type(&self) -> Kind {
-        match &self.field_type {
+    pub fn compute_select_type(&self) -> anyhow::Result<Kind> {
+        Ok(match &self.field_type {
             FieldType::Simple => match self.is_optional {
                 true => Kind::Option(Box::new(self.return_type.clone())),
                 false => self.return_type.clone(),
@@ -95,7 +95,7 @@ impl FieldParsed {
             FieldType::NestedObject(obj) => {
                 let mut fields = BTreeMap::new();
                 for (key, value) in obj {
-                    fields.insert(key.clone(), value.compute_select_type());
+                    fields.insert(key.clone(), value.compute_select_type()?);
                 }
 
                 let fields = kind!(Obj fields);
@@ -111,12 +111,12 @@ impl FieldParsed {
                     FieldType::NestedObject(fields) => {
                         let mut select_fields = BTreeMap::new();
                         for (key, value) in fields {
-                            select_fields.insert(key.clone(), value.compute_select_type());
+                            select_fields.insert(key.clone(), value.compute_select_type()?);
                         }
                         kind!(Obj select_fields)
                     }
                     FieldType::NestedArray(..) => {
-                        todo!("Nested array in nested array are not yet supported")
+                        anyhow::bail!("Nested array in nested array are not yet supported")
                     }
                 };
 
@@ -125,41 +125,41 @@ impl FieldParsed {
                     false => kind!(Arr select_type),
                 }
             }
-        }
+        })
     }
 
-    pub fn compute_update_type(&self) -> Kind {
-        todo!()
+    pub fn compute_update_type(&self) -> anyhow::Result<Kind> {
+        anyhow::bail!("TODO: query interpretation for UPDATE statements is not yet supported")
         // return both flatten types
         // ignore readonlys
     }
 }
 
 impl TableParsed {
-    pub fn compute_create_fields(&self) -> BTreeMap<String, Kind> {
+    pub fn compute_create_fields(&self) -> anyhow::Result<BTreeMap<String, Kind>> {
         let mut fields = BTreeMap::new();
         for (key, field) in &self.fields {
             if !field.has_override_value {
-                fields.insert(key.clone(), field.compute_create_type());
+                fields.insert(key.clone(), field.compute_create_type()?);
             }
         }
-        fields
+        Ok(fields)
     }
 
-    pub fn compute_select_fields(&self) -> BTreeMap<String, Kind> {
+    pub fn compute_select_fields(&self) -> anyhow::Result<BTreeMap<String, Kind>> {
         let mut fields = BTreeMap::new();
         for (key, value) in &self.fields {
-            fields.insert(key.clone(), value.compute_select_type());
+            fields.insert(key.clone(), value.compute_select_type()?);
         }
-        fields
+        Ok(fields)
     }
 
-    pub fn compute_update_fields(&self) -> BTreeMap<String, Kind> {
+    pub fn compute_update_fields(&self) -> anyhow::Result<BTreeMap<String, Kind>> {
         let mut fields = BTreeMap::new();
         for (key, value) in &self.fields {
-            fields.insert(key.clone(), value.compute_update_type());
+            fields.insert(key.clone(), value.compute_update_type()?);
         }
-        fields
+        Ok(fields)
     }
 }
 
@@ -346,7 +346,7 @@ fn entry_uses_value_param(entry: &Entry) -> Result<bool, anyhow::Error> {
         Entry::Define(_) => anyhow::bail!("Define statements not supported in VALUE clause yet"),
         Entry::Remove(_) => anyhow::bail!("Remove statements not supported in VALUE clause yet"),
         Entry::Rebuild(_) => anyhow::bail!("Rebuild statements not supported in VALUE clause yet"),
-        _ => todo!(),
+        _ => anyhow::bail!("Unsupported statement type: `{}`", entry),
     })
 }
 

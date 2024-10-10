@@ -251,6 +251,6 @@ fn generate_type_definition(
         }
 
         // Catch all
-        kind => unimplemented!("Kind {:?} not yet supported", kind),
+        kind => anyhow::bail!("Kind {:?} not yet supported", kind),
     }
 }
