@@ -142,7 +142,10 @@ export class TypedSurreal extends Surreal {
 }
 
 fn get_table_id_type(table: &Table, schema: &SchemaState) -> Result<String, anyhow::Error> {
-    let table_parsed = schema.schema.tables.get(table.0.as_str()).unwrap();
+    let table_parsed = match schema.schema.tables.get(table.0.as_str()) {
+        Some(table) => table,
+        None => anyhow::bail!("Tried to use a table that does't exist: {}", table.0),
+    };
     generate_type_definition(&table_parsed.id_value_type, schema)
 }
 

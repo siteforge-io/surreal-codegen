@@ -6,6 +6,7 @@ use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 use surreal_type_generator::{
     step_1_parse_sql, step_2_interpret,
     step_3_codegen::{self},
+    utils::printing::indent,
 };
 
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -54,15 +55,15 @@ pub fn main() {
         Ok(_) => {}
         Err(err) => {
             eprintln!(
-                "{} {}",
+                "{}\n{}",
                 " ✕ Error: ".on_bright_red().bright_white().bold(),
                 err.to_string()
             );
 
             println!(
-                "{}\n{}",
-                "If you expected this query to work, please file an issue at:".white(),
-                "https://github.com/siteforge-io/surreal-codegen/issues".bright_cyan()
+                "\n{}\n{}",
+                indent(&"If you expected this query to work, please file an issue at:".white()),
+                indent(&"https://github.com/siteforge-io/surreal-codegen/issues".bright_cyan()),
             );
         }
     });
@@ -78,7 +79,6 @@ pub fn main() {
 }
 
 fn check_latest_version() {
-    println!("\n");
     if let Some(latest_version) = fetch_latest_version() {
         let current_version = Version::parse(CURRENT_VERSION).unwrap();
         if latest_version > current_version {
@@ -162,10 +162,10 @@ pub fn interpret() -> anyhow::Result<()> {
         {
             Ok(type_info) => type_info,
             Err(err) => anyhow::bail!(
-                "{} {}\n{}",
-                " ✕ Error Parsing: ".on_bright_red().bright_white().bold(),
+                "{} {}\n'{}'",
+                " ✕ Error Parsing: ".bright_red().bold(),
                 file_name.bright_green(),
-                err.to_string(),
+                indent(&err.to_string()),
             ),
         };
 
