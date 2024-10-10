@@ -6,6 +6,9 @@ fn field_defaults() -> anyhow::Result<()> {
     let schema = r#"
 DEFINE TABLE user SCHEMAFULL;
 DEFINE FIELD created_at ON user TYPE datetime VALUE time::now() READONLY;
+DEFINE FIELD foo ON user TYPE array<record<foo>> DEFAULT [];
+
+DEFINE TABLE foo SCHEMAFULL;
 "#;
 
     let QueryResult { return_types, .. } =
@@ -20,7 +23,8 @@ CREATE user;
         return_types,
         vec![kind!([kind!({
             id: kind!(Record ["user"]),
-            created_at: kind!(Datetime)
+            created_at: kind!(Datetime),
+            foo: kind!([kind!(Record ["foo"])])
         })])]
     );
     Ok(())

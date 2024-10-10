@@ -33,7 +33,8 @@ impl QueryState {
             schema,
             defined_variables,
             inferred_variables: BTreeMap::new(),
-            stack_variables: Vec::new(),
+            // initial global query stack frame for any LET statements
+            stack_variables: vec![BTreeMap::new()],
         }
     }
 

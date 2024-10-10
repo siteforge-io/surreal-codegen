@@ -6,7 +6,7 @@ pub fn interpret_let_statement(
     let_statement: &SetStatement,
     state: &mut QueryState,
 ) -> anyhow::Result<Kind> {
-    state.infer(&let_statement.name, match let_statement {
+    state.set_local(&let_statement.name, match let_statement {
         SetStatement {
             kind: Some(kind), ..
         } => kind.clone(),
