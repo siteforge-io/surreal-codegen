@@ -42,6 +42,7 @@ fn get_statement_return_type(
         Statement::Value(value) => get_value_return_type(value, &BTreeMap::new(), state)?,
         Statement::Begin(_) => return Ok(None),
         Statement::Commit(_) => return Ok(None),
+        Statement::Set(set) => interpret_let_statement(set, state)?,
         _ => anyhow::bail!("Unsupported statement type: `{}`", stmt),
     }))
 }

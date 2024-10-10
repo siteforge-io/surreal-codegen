@@ -291,6 +291,17 @@ You can also define global parameters in a `global.surql` file, which will be av
 - [ ] `ABORT`
 - [ ] `THROW`
 
+### `LET` statement
+- [x] `LET` statement
+```surql
+-- If we can't infer the type of the `LET` statement
+-- you can use a type annotation
+LET $id: record<foo> = $foo.id;
+
+UPSERT ONLY $id CONTENT $foo;
+```
+
+
 ## Contributing
 
 We welcome contributions to this project, please see our [Contributing Guide](CONTRIBUTING.md) for more information.

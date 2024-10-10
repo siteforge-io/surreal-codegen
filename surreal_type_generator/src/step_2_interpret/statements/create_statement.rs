@@ -2,7 +2,7 @@ use surrealdb::sql::{statements::CreateStatement, Data, Fields, Output, Value, V
 
 use crate::{
     kind,
-    step_2_interpret::{get_statement_fields, schema::QueryState},
+    step_2_interpret::{get_statement_fields, schema::QueryState, utils::get_value_table},
     Kind,
 };
 
@@ -58,11 +58,8 @@ fn validate_data_type(
             let mut tables = Vec::new();
 
             for table in what.iter() {
-                let table_name = match table {
-                    Value::Table(table) => table.0.as_str(),
-                    _ => anyhow::bail!("Expected table name"),
-                };
-                match state.schema.schema.tables.get(table_name) {
+                let table_name = get_value_table(table, state)?;
+                match state.schema.schema.tables.get(&table_name) {
                     Some(table) => {
                         let create_fields = kind!(Obj table.compute_create_fields());
                         tables

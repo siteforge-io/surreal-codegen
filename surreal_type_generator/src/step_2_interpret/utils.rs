@@ -5,11 +5,11 @@ use surrealdb::sql::{Ident, Literal, Param, Part, Thing, Value};
 
 use super::schema::{QueryState, TableFields};
 
-pub fn get_what_fields(
+pub fn get_value_table(
     what_value: &Value,
     state: &mut QueryState,
-) -> Result<TableFields, anyhow::Error> {
-    let table_name = match what_value {
+) -> Result<String, anyhow::Error> {
+    match what_value {
         Value::Table(table) => Ok(table.0.clone()),
         Value::Param(Param {
             0: Ident { 0: param_ident, .. },
@@ -18,13 +18,19 @@ pub fn get_what_fields(
             if let Some(Kind::Record(tables)) = state.get(param_ident.as_str()) {
                 Ok(tables[0].0.clone())
             } else {
-                Err(anyhow::anyhow!("Unsupported parameter: {}", param_ident))
+                anyhow::bail!("Expected record type for param: {}", param_ident)
             }
         }
         Value::Thing(Thing { tb, .. }) => Ok(tb.clone()),
-        _ => Err(anyhow::anyhow!("Unsupported FROM value: {:#?}", what_value)),
-    }?;
+        _ => anyhow::bail!("Expected record type, got: {}", what_value),
+    }
+}
 
+pub fn get_what_fields(
+    what_value: &Value,
+    state: &mut QueryState,
+) -> Result<TableFields, anyhow::Error> {
+    let table_name = get_value_table(what_value, state)?;
     Ok(state.table_select_fields(&table_name)?)
 }
 
