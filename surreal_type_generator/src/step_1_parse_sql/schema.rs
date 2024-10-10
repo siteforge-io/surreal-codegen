@@ -188,7 +188,7 @@ fn parse_table(
             None => &kind!(Any),
         };
 
-        let to_insert = FieldParsed {
+        let mut to_insert = FieldParsed {
             name: match &idiom[idiom.len() - 1] {
                 Part::Field(ident) => ident.to_string(),
                 _ => anyhow::bail!("Invalid path `{}`", idiom),
@@ -226,6 +226,11 @@ fn parse_table(
                 _ => return_type.clone(),
             },
         };
+
+        // Handle edge case where `DEFINE FIELD id ON foo TYPE string` must have a default value
+        if idiom.len() == 1 && idiom[0] == Part::Field("id".into()) {
+            to_insert.has_default = true;
+        }
 
         insert_into_object(&idiom, &mut fields, to_insert)?;
     }

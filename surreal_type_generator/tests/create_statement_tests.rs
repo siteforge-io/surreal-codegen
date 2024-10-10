@@ -206,3 +206,43 @@ DEFINE FIELD updated_at ON user TYPE datetime VALUE time::now();
 
     Ok(())
 }
+
+#[test]
+fn create_statement_with_id_schema_should_be_optional() -> anyhow::Result<()> {
+    let query = r#"
+CREATE foo:bar CONTENT $foo;
+"#;
+    let schema = r#"
+DEFINE TABLE foo SCHEMAFULL;
+DEFINE FIELD id ON foo TYPE string;
+"#;
+
+    let QueryResult {
+        return_types,
+        variables,
+        ..
+    } = surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+    let foo_vars = kind!({
+        id: kind!(Opt (kind!(Record ["foo"]))),
+    });
+
+    assert_eq_sorted!(
+        variables,
+        var_map! {
+            foo: kind!(Either [
+                foo_vars.clone(),
+                kind!([foo_vars.clone()]),
+            ])
+        }
+    );
+
+    assert_eq_sorted!(
+        return_types,
+        vec![kind!([kind!({
+            id: kind!(Record ["foo"]),
+        })])]
+    );
+
+    Ok(())
+}
