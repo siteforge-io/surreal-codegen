@@ -59,8 +59,9 @@ pub fn main() {
                 err.to_string()
             );
 
-            println!("{}\n{}",
-                "If you expected this query to work, please file an issue at:".white()
+            println!(
+                "{}\n{}",
+                "If you expected this query to work, please file an issue at:".white(),
                 "https://github.com/siteforge-io/surreal-codegen/issues".bright_cyan()
             );
         }
