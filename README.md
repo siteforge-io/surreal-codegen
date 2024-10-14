@@ -123,11 +123,28 @@ You can also define global parameters in a `global.surql` file, which will be av
 <record<user>> $auth;
 ```
 
-# Notes
-- We only currently support `SCHEMAFULL` tables so far, but we are working on supporting other table types.
+## Overriding the default file header
+You can override the default imported classes by specifying the `--header` option. You must include a RecordID type import, and a Surreal class that contains
+a `.query(query: string, variables?: Record<string, unknown>)` method.
+
+You can also use this to specify a comment to be added to the top of the generated file, such as ESLint ignore comments.
+Or alternatively, you can ignore the generated file by including the file in your eslint ignore list.
+
+### Example
+```sh
+surreal-codegen \
+  --schema ./schema.surql \
+  --dir ./queries \
+  --output ./queries.ts \
+  --header "import { RecordId, Surreal } from 'my-custom-surreal-class'"
+```
+
 
 
 # Features Supported
+
+### Notes
+- We only currently support `SCHEMAFULL` tables so far, but we are working on supporting other table types.
 
 ### General Type Support and Handling
 - [x] `never`
