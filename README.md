@@ -31,6 +31,7 @@ Options:
   -d, --dir <DIR>        The directory containing the Surql files
   -s, --schema <SCHEMA>
   -o, --output <OUTPUT>  The name of the output file default of `types.ts` [default: ./types.ts]
+      --header <HEADER>  Header to add to the top of the output file If you specify this, you must import in RecordId type and a Surreal class that has a .query(query: string, variables?: Record<string, unknown>) method [default: "import { type RecordId, Surreal } from 'surrealdb'"]
   -h, --help             Print help
 ```
 
