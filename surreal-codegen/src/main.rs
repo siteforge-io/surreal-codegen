@@ -30,7 +30,7 @@ struct Cli {
     /// If you specify this, you must import in RecordId type and a Surreal class that has a .query(query: string, variables?: Record<string, unknown>) method
     #[clap(
         long,
-        default_value = "import { type RecordId, Surreal } from 'surrealdb.js'"
+        default_value = "import { type RecordId, Surreal } from 'surrealdb'"
     )]
     header: String,
 }
