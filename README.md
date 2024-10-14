@@ -173,22 +173,16 @@ surreal-codegen \
 - [x] `RETURN { foo: 1, bar: 2 }`
 
 ## Automatic Parameter Inference
+
+### General
 - [ ] `WHERE foo = $bar` parameter inference
-- [ ] `fn::foo($bar)` parameter inference
-- [ ] `CREATE baz SET foo = $bar` parameter inference
-- [ ] `CREATE baz CONTENT { foo: $bar }` parameter inference
-- [x] `CREATE baz CONTENT $foo` parameter inference
-- [ ] `UPDATE baz SET foo = $bar` parameter inference
-- [ ] `UPDATE baz CONTENT $foo` parameter inference
-- [ ] `UPDATE baz MERGE $foo` parameter inference
-- [ ] `UPDATE baz MERGE { foo: $bar }` parameter inference
-- [ ] `UPSERT baz SET foo = $bar` parameter inference
-- [x] `INSERT INTO baz $foo` parameter inference
+- [ ] `fn::foo($bar)` function calling parameter inference
 
 ### `SELECT` statements
-- [x] All fields
-- [x] Fields
-- [x] Fields with aliases
+- [x] `*` all fields
+- [x] `foo.bar` field access
+- [x] `foo as bar` field alias
+- [ ] `foo.{bar, baz}` destructuring access.
 - [x] `FROM` targets
 - [x] `VALUE`
 - [x] `GROUP BY`
@@ -204,7 +198,9 @@ surreal-codegen \
 - [x] `RETRUN @statement_param` with `$before` field access
 
 ### `INSERT` statements
-- [X] TODO
+- [x] `INSERT INTO baz $foo` parameter inference
+- [ ] `INSERT INTO baz { foo: $bar }` parameter inference
+- [ ] `INSERT INTO baz ... ON DUPLICATE KEY UPDATE foo = $bar` parameter inference
 
 ### `RELATE` statements
 - [ ] TODO
@@ -220,32 +216,34 @@ surreal-codegen \
 - [x] `RETURN AFTER`
 - [ ] `RETURN DIFF`
 - [x] `RETRUN @statement_param` with `$before` and `$after` field access
-- [ ] `CONTENT { foo: $bar }` parameter inference
 - [ ] `CONTENT $foo` parameter inference
+- [ ] `CONTENT { foo: $bar }` parameter inference
 - [ ] `SET foo = $bar` parameter inference
 - [ ] `MERGE $bar` parameter inference
 - [ ] `MERGE { foo: $bar }` parameter inference
+- [ ] `PATCH ...` parameter inference
 
 
 ### `CREATE` statements
+- [ ] `CREATE baz SET foo = $bar` parameter inference
+- [ ] `CREATE baz CONTENT { foo: $bar }` parameter inference
+- [x] `CREATE baz CONTENT $foo` parameter inference
 - [x] `RETURN BEFORE`
 - [x] `RETURN AFTER`
 - [ ] `RETURN DIFF`
 - [x] `RETRUN @statement_param` with `$after` field access
-- [ ] `CONTENT { foo: $bar }` parameter inference
-- [ ] `CONTENT $foo` parameter inference
-- [ ] `SET foo = $bar` parameter inference
 
 ### `UPSERT` statements
 - [X] `RETURN BEFORE`
 - [X] `RETURN AFTER`
 - [X] `RETURN DIFF`
 - [X] `RETRUN @statement_param` with `$after` field access
-- [ ] `MERGE { foo: $bar }` parameter inference
-- [ ] `MERGE $foo` parameter inference
-- [ ] `CONTENT { foo: $bar }` parameter inference
-- [X] `CONTENT $foo` parameter inference
+- [x] `CONTENT $foo` parameter inference
 - [ ] `SET foo = $bar` parameter inference
+- [ ] `MERGE { foo: $bar }` parameter inference
+- [ ] `CONTENT { foo: $bar }` parameter inference
+- [ ] `MERGE $foo` parameter inference
+- [ ] `PATCH ...` parameter inference
 
 
 ### Value expressions
