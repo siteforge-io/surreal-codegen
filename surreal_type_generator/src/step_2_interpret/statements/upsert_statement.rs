@@ -45,7 +45,8 @@ pub fn validate_data_type(
     data: &Data,
 ) -> Result<(), anyhow::Error> {
     match data {
-        Data::ContentExpression(Value::Param(param)) => {
+        Data::MergeExpression(Value::Param(param))
+        | Data::ContentExpression(Value::Param(param)) => {
             // we want to infer the type of this param by reading the table's required types and fields for insertion
             let mut tables = Vec::new();
 

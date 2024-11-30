@@ -242,7 +242,7 @@ surreal-codegen \
 - [ ] `SET foo = $bar` parameter inference
 - [ ] `MERGE { foo: $bar }` parameter inference
 - [ ] `CONTENT { foo: $bar }` parameter inference
-- [ ] `MERGE $foo` parameter inference
+- [X] `MERGE $foo` parameter inference
 - [ ] `PATCH ...` parameter inference
 
 
