@@ -329,6 +329,12 @@ pub fn match_return_type(
                 Ok(kind!(Obj nested_fields.clone()))
             }
         }
+        Kind::Literal(Literal::String(string)) => {
+            Ok(Kind::Literal(Literal::String(string.clone())))
+        }
+        Kind::Literal(Literal::Number(number)) => {
+            Ok(Kind::Literal(Literal::Number(number.clone())))
+        }
         Kind::String => Ok(Kind::String),
         Kind::Int => Ok(Kind::Int),
         Kind::Float => Ok(Kind::Float),
@@ -392,6 +398,13 @@ pub fn match_return_type(
         Kind::Any => Ok(Kind::Any),
         Kind::Number => Ok(Kind::Number),
         Kind::Object => Ok(Kind::Object),
+        Kind::Either(return_types) => {
+            let mut return_types = return_types.clone();
+            for return_type in &mut return_types {
+                *return_type = match_return_type(&return_type, &parts, field_types, state)?;
+            }
+            Ok(Kind::Either(return_types))
+        }
         _ => anyhow::bail!("Unsupported return type: {:?}", return_type),
     }
 }
