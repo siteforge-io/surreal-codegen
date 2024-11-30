@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-surrealdb = { version = "2.0.3", features = ["kv-mem"] }
+surrealdb = { version = "2.1.2", features = ["kv-mem"] }
 # wait for https://github.com/surrealdb/surrealdb/pull/4889
 # surrealdb = { git = "https://github.com/surrealdb/surrealdb.git", rev = "3daa84ca8988a303decdef09ca5252b53331143a" }
 anyhow = "1.0.83"
