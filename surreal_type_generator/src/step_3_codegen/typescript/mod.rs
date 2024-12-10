@@ -63,7 +63,7 @@ pub fn generate_typescript_output(
                 .enumerate()
                 .map(|(i, x)| {
                     format!(
-                        "/// ---------------------\n{}{}:\n/// ---------------------\n{}",
+                        "/// -------------\n{}{}:\n/// -------------\n{}",
                         "/// Result ",
                         i,
                         x.pretty_string()
@@ -76,7 +76,8 @@ pub fn generate_typescript_output(
         output.push_str(&format!(
             "export const {}Query = {}\n",
             name,
-            serde_json::to_string(&statements.to_string())?
+            // Comment the query name so that they are distinguished between identical queries
+            serde_json::to_string(&format!("-- {}\n{}", name, &statements.to_string()))?
         ));
         output.push_str(&format!("export type {}Result = [\n{}\n]\n", name, {
             let mut lines = Vec::new();

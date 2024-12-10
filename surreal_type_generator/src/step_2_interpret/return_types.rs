@@ -313,7 +313,7 @@ pub fn get_field_from_paths(
     }
 }
 
-pub fn match_return_type(
+fn match_return_type(
     return_type: &Kind,
     parts: &[Part],
     field_types: &BTreeMap<String, Kind>,
@@ -321,27 +321,29 @@ pub fn match_return_type(
 ) -> Result<Kind, anyhow::Error> {
     let has_next_part = parts.len() > 1;
 
-    match return_type {
+    Ok(match return_type {
+        Kind::String => Kind::String,
+        Kind::Int => Kind::Int,
+        Kind::Float => Kind::Float,
+        Kind::Datetime => Kind::Datetime,
+        Kind::Duration => Kind::Duration,
+        Kind::Decimal => Kind::Decimal,
+        Kind::Bool => Kind::Bool,
+        Kind::Null => Kind::Null,
+        Kind::Uuid => Kind::Uuid,
+        Kind::Any => Kind::Any,
+        Kind::Number => Kind::Number,
+        Kind::Object => Kind::Object,
+        Kind::Literal(lit @ (Literal::String(_) | Literal::Number(_))) => {
+            Kind::Literal(lit.clone())
+        }
         Kind::Literal(Literal::Object(nested_fields)) => {
             if has_next_part {
-                get_field_from_paths(&parts[1..], nested_fields, state)
+                get_field_from_paths(&parts[1..], nested_fields, state)?
             } else {
-                Ok(kind!(Obj nested_fields.clone()))
+                kind!(Obj nested_fields.clone())
             }
         }
-        Kind::Literal(Literal::String(string)) => {
-            Ok(Kind::Literal(Literal::String(string.clone())))
-        }
-        Kind::Literal(Literal::Number(number)) => {
-            Ok(Kind::Literal(Literal::Number(number.clone())))
-        }
-        Kind::String => Ok(Kind::String),
-        Kind::Int => Ok(Kind::Int),
-        Kind::Float => Ok(Kind::Float),
-        Kind::Datetime => Ok(Kind::Datetime),
-        Kind::Duration => Ok(Kind::Duration),
-        Kind::Decimal => Ok(Kind::Decimal),
-        Kind::Bool => Ok(Kind::Bool),
         Kind::Record(tables) => {
             if has_next_part {
                 let mut return_types = Vec::new();
@@ -354,57 +356,59 @@ pub fn match_return_type(
                     return_types.push(return_type);
                 }
                 if return_types.len() == 1 {
-                    Ok(return_types.pop().unwrap())
+                    return_types.pop().unwrap()
                 } else {
-                    Ok(Kind::Either(return_types))
+                    Kind::Either(return_types)
                 }
             } else {
-                Ok(Kind::Record(tables.clone()))
+                Kind::Record(tables.clone())
             }
         }
-        Kind::Option(return_type) => Ok(kind!(Opt(match_return_type(
+        Kind::Option(return_type) => kind!(Opt(match_return_type(
             return_type,
             &parts,
             field_types,
             state,
-        )?))),
+        )?)),
         Kind::Array(return_type, ..) => match parts.first() {
-            Some(Part::Index(_)) => Ok(Kind::Option(Box::new(match_return_type(
-                return_type,
-                &parts,
-                field_types,
-                state,
-            )?))),
-            Some(Part::All) => Ok(kind!(Arr match_return_type(
+            Some(Part::Index(_)) => Kind::Option(Box::new(match_return_type(
                 return_type,
                 &parts,
                 field_types,
                 state,
             )?)),
-            Some(Part::Field(_)) => Ok(kind!(Arr match_return_type(
-                return_type,
-                &parts[1..],
-                field_types,
-                state,
-            )?)),
-            Some(_) => anyhow::bail!("Unsupported path: {}", Idiom::from(parts)),
-            None => anyhow::bail!(
-                "Tried to access array with no fields: {}",
-                Idiom::from(parts)
-            ),
+            Some(Part::All) => kind!(Arr match_return_type(
+            return_type,
+            &parts,
+            field_types,
+            state,
+        )?),
+            Some(Part::Field(_)) => kind!(Arr match_return_type(
+            return_type,
+            &parts[1..],
+            field_types,
+            state,
+        )?),
+            Some(_) => return Err(anyhow::anyhow!("Unsupported path: {}", Idiom::from(parts))),
+            None => {
+                return Err(anyhow::anyhow!(
+                    "Tried to access array with no fields: {}",
+                    Idiom::from(parts)
+                ))
+            }
         },
-        Kind::Null => Ok(Kind::Null),
-        Kind::Uuid => Ok(Kind::Uuid),
-        Kind::Any => Ok(Kind::Any),
-        Kind::Number => Ok(Kind::Number),
-        Kind::Object => Ok(Kind::Object),
         Kind::Either(return_types) => {
             let mut return_types = return_types.clone();
             for return_type in &mut return_types {
                 *return_type = match_return_type(&return_type, &parts, field_types, state)?;
             }
-            Ok(Kind::Either(return_types))
+            Kind::Either(return_types)
         }
-        _ => anyhow::bail!("Unsupported return type: {:?}", return_type),
-    }
+        _ => {
+            return Err(anyhow::anyhow!(
+                "Unsupported return type: {:?}",
+                return_type
+            ))
+        }
+    })
 }
