@@ -179,7 +179,7 @@ fn get_view_table(
     match get_view_return_type(view, state)? {
         Kind::Literal(Literal::Object(mut fields)) => {
             if view.what.0.len() != 1 {
-                return Err(anyhow::anyhow!("Expected single table in view"));
+                anyhow::bail!("Expected single table in view");
             }
 
             // add the implicit id field
@@ -187,10 +187,8 @@ fn get_view_table(
 
             Ok(fields)
         }
-        Kind::Either(..) => Err(anyhow::anyhow!(
-            "Multiple tables in view are not currently supported"
-        )),
-        _ => Err(anyhow::anyhow!("Expected object return type"))?,
+        Kind::Either(..) => anyhow::bail!("Multiple tables in view are not currently supported"),
+        _ => anyhow::bail!("Expected object return type for view table"),
     }
 }
 

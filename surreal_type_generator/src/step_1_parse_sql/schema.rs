@@ -6,8 +6,8 @@ use surrealdb::sql::{
         DefineFieldStatement, DefineFunctionStatement, DefineStatement, DefineTableStatement,
         IfelseStatement, ThrowStatement,
     },
-    Block, Entry, Expression, Fields, Function, Idiom, Kind, Param, Part, Query, Statement, Tables,
-    Value,
+    Block, Entry, Expression, Fields, Function, Groups, Idiom, Kind, Param, Part, Query, Statement,
+    Tables, Value,
 };
 
 use crate::kind;
@@ -22,8 +22,10 @@ pub struct SchemaParsed {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ViewParsed {
     pub name: String,
+    // pub id_value_type: Kind,
     pub expr: Fields,
     pub what: Tables,
+    pub groups: Option<Groups>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -129,7 +131,7 @@ impl FieldParsed {
     }
 
     pub fn compute_update_type(&self) -> anyhow::Result<Kind> {
-        anyhow::bail!("TODO: query interpretation for UPDATE statements is not yet supported")
+        anyhow::bail!("TODO: Query interpretation for UPDATE statements is not yet supported")
         // return both flatten types
         // ignore readonlys
     }
@@ -356,7 +358,7 @@ fn entry_uses_value_param(entry: &Entry) -> Result<bool, anyhow::Error> {
 }
 
 fn query_uses_value_param(_query: &Query) -> Result<bool, anyhow::Error> {
-    anyhow::bail!("Query expressions not supported in VALUE clause")
+    anyhow::bail!("Query expressions not yet supported in VALUE clauses")
     // Ok(match query {
     //     #[allow(unreachable_patterns)]
     //     _ => anyhow::bail!("Query expressions not supported in VALUE clause"),
@@ -390,6 +392,7 @@ pub fn parse_schema(schema: &str) -> Result<SchemaParsed, anyhow::Error> {
                                 name: name.clone(),
                                 expr: view.expr.clone(),
                                 what: view.what.clone(),
+                                groups: view.group.clone(),
                             },
                         );
                     }
@@ -442,7 +445,7 @@ pub fn parse_schema(schema: &str) -> Result<SchemaParsed, anyhow::Error> {
 
     let tables = {
         let mut new_tables = BTreeMap::new();
-        for (name, table) in tables.iter_mut() {
+        for (name, table) in tables.iter() {
             new_tables.insert(name.clone(), parse_table(&table.definition, &table.fields)?);
         }
         new_tables

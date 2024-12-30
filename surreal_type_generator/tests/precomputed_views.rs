@@ -67,3 +67,44 @@ SELECT * FROM baz;
 
     Ok(())
 }
+
+#[test]
+fn roadmap_vote_counts() -> anyhow::Result<()> {
+    let schema = r#"
+DEFINE TABLE roadmap_vote SCHEMAFULL
+    PERMISSIONS
+        FOR SELECT WHERE true
+        FOR CREATE WHERE user = $auth
+        FOR DELETE WHERE user = $auth;
+
+DEFINE FIELD id ON roadmap_vote TYPE string;
+DEFINE FIELD user ON roadmap_vote TYPE record<user>;
+DEFINE FIELD task_id ON roadmap_vote TYPE string;
+DEFINE FIELD created_at ON roadmap_vote TYPE datetime VALUE time::now() READONLY;
+
+DEFINE INDEX unique_user_task ON roadmap_vote FIELDS user, task_id UNIQUE;
+
+DEFINE TABLE roadmap_vote_counts AS 
+    SELECT 
+        task_id,
+        count() as total_votes 
+    FROM roadmap_vote 
+    GROUP BY task_id;
+"#;
+
+    let query = "SELECT * FROM roadmap_vote_counts;";
+
+    let QueryResult { return_types, .. } =
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema)?;
+
+    assert_eq_sorted!(
+        return_types,
+        vec![kind!([kind!({
+            id: kind!(Record ["roadmap_vote_counts"]),
+            task_id: kind!(String),
+            total_votes: kind!(Number)
+        })])]
+    );
+
+    Ok(())
+}

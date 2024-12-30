@@ -1,4 +1,4 @@
-use crate::{kind, utils::printing::indent, Kind, PrettyString};
+use crate::{kind, step_1_parse_sql::ViewParsed, utils::printing::indent, Kind, PrettyString};
 use surrealdb::sql::{Literal, Table};
 
 use crate::step_2_interpret::SchemaState;
@@ -143,11 +143,37 @@ export class TypedSurreal extends Surreal {
 }
 
 fn get_table_id_type(table: &Table, schema: &SchemaState) -> Result<String, anyhow::Error> {
-    let table_parsed = match schema.schema.tables.get(table.0.as_str()) {
-        Some(table) => table,
-        None => anyhow::bail!("Tried to use a table that does't exist: {}", table.0),
-    };
-    generate_type_definition(&table_parsed.id_value_type, schema)
+    let record_id_type = get_record_id_value_type(table.0.as_str(), schema)?;
+    generate_type_definition(&record_id_type, schema)
+}
+
+pub fn interpret_view_id_value_kind(
+    view: &ViewParsed,
+    state: &SchemaState,
+) -> Result<Kind, anyhow::Error> {
+    if view.what.0.len() != 1 {
+        anyhow::bail!("Expected single table in view");
+    }
+
+    let table_name = view.what.0.first().unwrap().to_string();
+
+    match &view.groups {
+        Some(_groups) => {
+            // TODO: implement this
+            return Ok(Kind::Any);
+        }
+        None => get_record_id_value_type(&table_name, state),
+    }
+}
+
+pub fn get_record_id_value_type(table: &str, schema: &SchemaState) -> Result<Kind, anyhow::Error> {
+    match schema.schema.tables.get(table) {
+        Some(table) => Ok(table.id_value_type.clone()),
+        None => match schema.schema.views.get(table).cloned() {
+            Some(view) => interpret_view_id_value_kind(&view, schema),
+            None => anyhow::bail!("Table `{}` not found for aggregate view `{}`", table, table),
+        },
+    }
 }
 
 fn generate_type_definition(
