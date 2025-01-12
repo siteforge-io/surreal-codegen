@@ -53,7 +53,7 @@ DEFINE TABLE placeholder SCHEMAFULL;
             Kind::Bool,
             Kind::Bool,
             Kind::Bool,
-            Kind::Bool
+            Kind::Number
         ]
     );
 

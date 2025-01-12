@@ -22,6 +22,7 @@ pub struct SchemaState {
 #[derive(Debug)]
 pub struct QueryState {
     pub schema: Arc<SchemaState>,
+    pub in_transaction: bool,
     defined_variables: BTreeMap<String, Kind>,
     inferred_variables: BTreeMap<String, Kind>,
     stack_variables: Vec<BTreeMap<String, Kind>>,
@@ -31,6 +32,7 @@ impl QueryState {
     pub fn new(schema: Arc<SchemaState>, defined_variables: BTreeMap<String, Kind>) -> Self {
         Self {
             schema,
+            in_transaction: false,
             defined_variables,
             inferred_variables: BTreeMap::new(),
             // initial global query stack frame for any LET statements

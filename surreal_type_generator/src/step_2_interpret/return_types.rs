@@ -210,8 +210,32 @@ pub fn get_expression_return_type(
             o: Operator::And, ..
         } => Kind::Bool,
         Expression::Binary {
-            o: Operator::Or, ..
-        } => Kind::Bool,
+            l,
+            o: Operator::Or,
+            r,
+        } => {
+            let l = get_value_return_type(l, field_types, state)?;
+            let r = get_value_return_type(r, field_types, state)?;
+
+            // If left is an `option<thing>` and right are both a `thing` we should return a `thing`
+            // This is because, if left is an option, it is considered falsey, and right will be returned
+            match (l, r) {
+                (Kind::Option(box left), right) => {
+                    if left == right {
+                        right
+                    } else {
+                        Kind::Either(vec![left, right])
+                    }
+                }
+                (left, right) => {
+                    if left == right {
+                        right
+                    } else {
+                        Kind::Either(vec![left, right])
+                    }
+                }
+            }
+        }
         Expression::Binary {
             o: Operator::Equal, ..
         } => Kind::Bool,

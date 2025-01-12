@@ -20,11 +20,65 @@ pub fn interpret_query(
     statements: &Vec<Statement>,
     state: &mut QueryState,
 ) -> Result<Vec<Kind>, anyhow::Error> {
-    statements
-        .iter()
-        .map(|stmt| get_statement_return_type(stmt, state))
-        .filter_map(|result| result.transpose())
-        .collect()
+    let mut results = Vec::new();
+    let mut remaining_statements = statements.clone();
+    // More efficient to pop from the end
+    remaining_statements.reverse();
+
+    while let Some(stmt) = remaining_statements.pop() {
+        match stmt {
+            Statement::Begin(_) => {
+                while let Some(stmt) = remaining_statements.pop() {
+                    let mut maybe_returns = Vec::new();
+
+                    match stmt {
+                        Statement::Commit(_) => {
+                            // We've hit a `COMMIT` statement, so we want to return the results
+                            // as we didn't run into any `RETURN` statements
+                            results.extend(maybe_returns);
+                            break;
+                        }
+                        Statement::Begin(_) => {
+                            anyhow::bail!("Unexpected `BEGIN` statement in transaction block")
+                        }
+                        // We ran into a `RETURN` statement, so we want to just return the result
+                        stmt @ Statement::Output(_) => {
+                            // We ignore whatever came before since we are returning in this block
+                            match get_statement_return_type(&stmt, state)? {
+                                Some(kind) => results.push(kind),
+                                None => {}
+                            };
+
+                            // We want to ignore any statements after the `RETURN` statement
+                            // until we hit a `COMMIT` statement
+                            while let Some(stmt) = remaining_statements.pop() {
+                                if matches!(stmt, Statement::Commit(_)) {
+                                    break;
+                                }
+                            }
+                            // Break out of the BEGIN block
+                            break;
+                        }
+                        // We may return these values except if we hit a `RETURN` statement
+                        _ => match get_statement_return_type(&stmt, state)? {
+                            Some(kind) => maybe_returns.push(kind),
+                            None => {}
+                        },
+                    }
+                }
+                continue;
+            }
+            Statement::Commit(_) => {
+                anyhow::bail!("Unexpected `COMMIT` statement in transaction block")
+            }
+            stmt => match get_statement_return_type(&stmt, state)? {
+                Some(kind) => results.push(kind),
+                None => {}
+            },
+        }
+    }
+
+    Ok(results)
 }
 
 fn get_statement_return_type(
@@ -40,8 +94,6 @@ fn get_statement_return_type(
         Statement::Output(output) => get_return_statement_return_type(output, state)?,
         Statement::Upsert(upsert) => get_upsert_statement_return_type(upsert, state)?,
         Statement::Value(value) => get_value_return_type(value, &BTreeMap::new(), state)?,
-        Statement::Begin(_) => return Ok(None),
-        Statement::Commit(_) => return Ok(None),
         Statement::Set(set) => interpret_let_statement(set, state)?,
         _ => anyhow::bail!("Unsupported statement type: `{}`", stmt),
     }))

@@ -2,7 +2,7 @@ use pretty_assertions_sorted::assert_eq_sorted;
 use surreal_type_generator::{kind, var_map, QueryResult};
 
 #[test]
-fn let_statement_parameter_infernece() -> anyhow::Result<()> {
+fn let_statement_parameter_inference() -> anyhow::Result<()> {
     let query = r#"
 LET $id: record<foo> = $page.id;
 

@@ -14,13 +14,12 @@ pub fn get_value_table(
         Value::Param(Param {
             0: Ident { 0: param_ident, .. },
             ..
-        }) => {
-            if let Some(Kind::Record(tables)) = state.get(param_ident.as_str()) {
-                Ok(tables[0].0.clone())
-            } else {
-                anyhow::bail!("Expected record type for param: {}", param_ident)
-            }
-        }
+        }) => match state.get(param_ident.as_str()) {
+            Some(Kind::Record(tables)) => Ok(tables[0].0.clone()),
+            // We can technically query on a option<record<thing>> so we can allow that
+            Some(Kind::Option(box Kind::Record(tables))) => Ok(tables[0].0.clone()),
+            _ => anyhow::bail!("Expected record type for param: {}", param_ident),
+        },
         Value::Thing(Thing { tb, .. }) => Ok(tb.clone()),
         _ => anyhow::bail!("Expected record type, got: {}", what_value),
     }

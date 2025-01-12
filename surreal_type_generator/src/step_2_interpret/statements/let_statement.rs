@@ -1,17 +1,22 @@
+use std::collections::BTreeMap;
 use surrealdb::sql::{statements::SetStatement, Kind};
 
-use crate::{kind, step_2_interpret::QueryState};
+use crate::step_2_interpret::{return_types::get_value_return_type, QueryState};
 
 pub fn interpret_let_statement(
     let_statement: &SetStatement,
     state: &mut QueryState,
 ) -> anyhow::Result<Kind> {
-    state.set_local(&let_statement.name, match let_statement {
+    let kind = match let_statement {
         SetStatement {
             kind: Some(kind), ..
         } => kind.clone(),
-        _ => anyhow::bail!("Could not infer type of LET statement\n{}\nTry using a type annotation, eg:\nLET $foo: string = ...", let_statement),
-    });
+        SetStatement {
+            kind: None, what, ..
+        } => get_value_return_type(what, &BTreeMap::new(), state)?,
+    };
 
-    return Ok(kind!(Null));
+    state.set_local(&let_statement.name, kind);
+
+    Ok(Kind::Null)
 }
