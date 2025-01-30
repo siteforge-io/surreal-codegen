@@ -243,6 +243,17 @@ fn generate_type_definition(
         Kind::Literal(Literal::String(string)) => Ok(serde_json::to_string(&string)?),
         Kind::Literal(Literal::Duration(_duration)) => Ok("Duration".to_string()),
         Kind::Literal(Literal::Number(number)) => Ok(number.to_string()),
+        Kind::Literal(Literal::DiscriminatedObject(_, objects)) => {
+            let kind = Kind::Either(
+                objects
+                    .clone()
+                    .into_iter()
+                    .map(|kind| Kind::Literal(Literal::Object(kind)))
+                    .collect(),
+            );
+
+            Ok(generate_type_definition(&kind, schema)?)
+        }
         Kind::Literal(Literal::Object(map)) => {
             let mut output = String::new();
             output.push_str("{\n");

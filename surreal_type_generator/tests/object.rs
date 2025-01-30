@@ -24,7 +24,7 @@ RETURN {
         return_types,
         vec![kind!({
             foo: kind!({
-                    bar: kind!(Number),
+                bar: kind!(Number),
                 baz: kind!(Number)
             }),
             qux: kind!(Number)
