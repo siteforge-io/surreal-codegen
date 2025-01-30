@@ -143,6 +143,7 @@ pub fn normal_function_return_type(name: &str) -> Result<Kind, anyhow::Error> {
         "meta::type" => Kind::String,
 
         // TODO: add more functions
+        "array::len" => Kind::Number,
         // - `array::`
         // - `encoding::`
         // - `geo::`

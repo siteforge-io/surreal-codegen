@@ -11,3 +11,9 @@
 6. In a fork, perform a git commit, with a message that includes the `Closes #issue_number`
 7. Submit a pull request
 8. Wait for the pull request to be reviewed and merged
+
+
+## Releasing (for maintainers)
+
+1. Push a git commit into main
+2. To install, run `cargo install --git https://github.com/siteforge-io/surreal-codegen.git`
