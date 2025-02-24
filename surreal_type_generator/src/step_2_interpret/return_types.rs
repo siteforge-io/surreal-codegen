@@ -428,6 +428,23 @@ fn match_return_type(
             }
             Kind::Either(return_types)
         }
+        Kind::Literal(Literal::Array(array)) => {
+            match array.len() {
+                0 => anyhow::bail!("Unsupported literal array: {:?}", array),
+                1 => {}
+                _ => anyhow::bail!("Unsupported literal array: {:?}", array),
+            }
+            match array.first() {
+                Some(Kind::Either(return_types)) => {
+                    let mut return_types = return_types.clone();
+                    for return_type in &mut return_types {
+                        *return_type = match_return_type(return_type, &parts, field_types, state)?;
+                    }
+                    Kind::Literal(Literal::Array(return_types))
+                }
+                _ => anyhow::bail!("Unsupported literal array: {:?}", array),
+            }
+        }
         _ => {
             return Err(anyhow::anyhow!(
                 "Unsupported return type: {:?}",

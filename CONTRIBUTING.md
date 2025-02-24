@@ -17,3 +17,10 @@
 
 1. Push a git commit into main
 2. To install, run `cargo install --git https://github.com/siteforge-io/surreal-codegen.git`
+
+## Local Installation
+
+1. Clone the git repository
+  - `git clone https://github.com/siteforge-io/surreal-codegen.git`
+2. Run `cargo install --path surreal-codegen`
+3. Run `surreal-codegen --help` to see the available commands

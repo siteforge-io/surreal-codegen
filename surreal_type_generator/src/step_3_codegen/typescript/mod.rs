@@ -285,10 +285,19 @@ fn generate_type_definition(
             output.push_str("\n}");
             Ok(output)
         }
-        Kind::Literal(Literal::Array(..)) => {
-            anyhow::bail!("Literal::Array not yet supported")
-            // let string = generate_type_definition(&**array, schema)?;
-            // Ok(format!("Array<{}>", string))
+        Kind::Literal(Literal::Array(array)) => {
+            // could be a tuple or an array
+            if array.len() == 1 {
+                let string = generate_type_definition(array.first().unwrap(), schema)?;
+                Ok(format!("Array<{}>", string))
+            } else {
+                let types = array
+                    .iter()
+                    .map(|kind| generate_type_definition(kind, schema))
+                    .collect::<Result<Vec<_>, _>>()?;
+                let string = types.join(", ");
+                Ok(format!("[{}]", string))
+            }
         }
 
         // Catch all

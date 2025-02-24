@@ -89,3 +89,30 @@ SELECT foo FROM baz;
         })])]
     );
 }
+
+#[test]
+fn tuple_with_literals() {
+    let schema = r#"
+DEFINE TABLE baz SCHEMAFULL;
+
+DEFINE FIELD foo ON TABLE baz TYPE [int | "a" | "b"];
+"#;
+
+    let query = r#"
+SELECT foo FROM baz;
+"#;
+
+    let QueryResult { return_types, .. } =
+        surreal_type_generator::step_3_codegen::query_to_return_type(query, schema).unwrap();
+
+    pretty_assertions_sorted::assert_eq_sorted!(
+        return_types,
+        vec![kind!([kind!({
+            foo: Kind::Literal(Literal::Array(vec![
+                kind!(Int),
+                Kind::Literal(Literal::String("a".into())),
+                Kind::Literal(Literal::String("b".into()))
+            ]))
+        })])]
+    );
+}
